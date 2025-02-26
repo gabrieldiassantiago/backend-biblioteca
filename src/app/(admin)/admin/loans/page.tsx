@@ -21,6 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
 import { updateLoanStatus } from "./actions";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton"; // Importa o Skeleton do Shadcn
 
 // Função para obter o library_id do usuário autenticado
 async function getUserLibraryId() {
@@ -80,6 +82,39 @@ interface Loan {
   user_name: string;
 }
 
+// Componente Skeleton para a tabela de empréstimos
+function LoanListSkeleton() {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Livro</TableHead>
+            <TableHead>Usuário</TableHead>
+            <TableHead>Data de Empréstimo</TableHead>
+            <TableHead>Data de Devolução</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <TableRow key={index}>
+              <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+              <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+// Componente principal da página de empréstimos
 export default async function LoansPage({
   searchParams,
 }: {
@@ -115,7 +150,7 @@ export default async function LoansPage({
     .eq('library_id', libraryId)
     .range(offset, offset + pageSize - 1)
     .order('borrowed_at', { ascending: false })
-    .returns<RawLoan[]>(); // Tipagem explícita do retorno
+    .returns<RawLoan[]>();
 
   if (error) {
     console.error("Erro ao buscar empréstimos:", error.message);
@@ -143,87 +178,89 @@ export default async function LoansPage({
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Histórico de Empréstimos</h1>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Livro</TableHead>
-              <TableHead>Usuário</TableHead>
-              <TableHead>Data de Empréstimo</TableHead>
-              <TableHead>Data de Devolução</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {formattedLoans.length > 0 ? (
-              formattedLoans.map((loan) => (
-                <TableRow key={loan.id}>
-                  <TableCell className="font-medium">{loan.book_title}</TableCell>
-                  <TableCell>{loan.user_name}</TableCell>
-                  <TableCell>{new Date(loan.borrowed_at).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    {loan.returned_at 
-                      ? new Date(loan.returned_at).toLocaleDateString() 
-                      : new Date(loan.due_date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={loan.status === "active" ? "default" : loan.status === "returned" ? "secondary" : "destructive"}>
-                      {loan.status === "active" ? "Ativo" : loan.status === "returned" ? "Devolvido" : "Atrasado"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <form action={updateLoanStatus.bind(null, loan.id, "active")}>
-                          <DropdownMenuItem asChild>
-                            <button type="submit" className="w-full text-left">
-                              Ativo
-                            </button>
-                          </DropdownMenuItem>
-                        </form>
-                        <form action={updateLoanStatus.bind(null, loan.id, "returned")}>
-                          <DropdownMenuItem asChild>
-                            <button type="submit" className="w-full text-left">
-                              Devolvido
-                            </button>
-                          </DropdownMenuItem>
-                        </form>
-                        <form action={updateLoanStatus.bind(null, loan.id, "overdue")}>
-                          <DropdownMenuItem asChild>
-                            <button type="submit" className="w-full text-left">
-                              Atrasado
-                            </button>
-                          </DropdownMenuItem>
-                        </form>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+      <Suspense fallback={<LoanListSkeleton />}>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Livro</TableHead>
+                <TableHead>Usuário</TableHead>
+                <TableHead>Data de Empréstimo</TableHead>
+                <TableHead>Data de Devolução</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {formattedLoans.length > 0 ? (
+                formattedLoans.map((loan) => (
+                  <TableRow key={loan.id}>
+                    <TableCell className="font-medium">{loan.book_title}</TableCell>
+                    <TableCell>{loan.user_name}</TableCell>
+                    <TableCell>{new Date(loan.borrowed_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {loan.returned_at 
+                        ? new Date(loan.returned_at).toLocaleDateString() 
+                        : new Date(loan.due_date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={loan.status === "active" ? "default" : loan.status === "returned" ? "secondary" : "destructive"}>
+                        {loan.status === "active" ? "Ativo" : loan.status === "returned" ? "Devolvido" : "Atrasado"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <form action={updateLoanStatus.bind(null, loan.id, "active")}>
+                            <DropdownMenuItem asChild>
+                              <button type="submit" className="w-full text-left">
+                                Ativo
+                              </button>
+                            </DropdownMenuItem>
+                          </form>
+                          <form action={updateLoanStatus.bind(null, loan.id, "returned")}>
+                            <DropdownMenuItem asChild>
+                              <button type="submit" className="w-full text-left">
+                                Devolvido
+                              </button>
+                            </DropdownMenuItem>
+                          </form>
+                          <form action={updateLoanStatus.bind(null, loan.id, "overdue")}>
+                            <DropdownMenuItem asChild>
+                              <button type="submit" className="w-full text-left">
+                                Atrasado
+                              </button>
+                            </DropdownMenuItem>
+                          </form>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4">
+                    Nenhum empréstimo registrado
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-4">
-                  Nenhum empréstimo registrado
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        
-        {totalPages > 1 && (
-          <div className="flex items-center justify-end space-x-2 py-4 px-4 border-t">
-            <div className="text-sm text-muted-foreground">
-              Página {page} de {totalPages}
+              )}
+            </TableBody>
+          </Table>
+          
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end space-x-2 py-4 px-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Página {page} de {totalPages}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </Suspense>
     </div>
   );
 }
