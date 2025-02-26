@@ -1,7 +1,8 @@
 // src/app/(admin)/admin/loans/update-loan-form.tsx
 "use server";
 
-import { updateLoanStatus } from "./page";
+import { updateLoanStatus } from "./actions";
+
 
 
 export async function UpdateLoanForm({ loanId }: { loanId: string }) {

@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { revalidatePath } from "next/cache";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
+import { updateLoanStatus } from "./actions";
 
 // Função para obter o library_id do usuário autenticado
 async function getUserLibraryId() {
@@ -51,7 +52,7 @@ interface User {
   full_name: string;
 }
 
-// Interface para o empréstimo com joins
+// Interface para o empréstimo com joins (tipo bruto do Supabase)
 interface RawLoan {
   id: string;
   user_id: string;
@@ -79,50 +80,6 @@ interface Loan {
   user_name: string;
 }
 
-// Server Action para atualizar o status do empréstimo
-export async function updateLoanStatus(loanId: string, newStatus: "active" | "returned" | "overdue") {
-  const supabase = await createClient();
-  const libraryId = await getUserLibraryId();
-
-  const { data: loan, error: fetchError } = await supabase
-    .from("loans")
-    .select("library_id, status")
-    .eq("id", loanId)
-    .single();
-
-  if (fetchError || !loan) {
-    throw new Error("Empréstimo não encontrado");
-  }
-  if (loan.library_id !== libraryId) {
-    throw new Error("Você não tem permissão para atualizar este empréstimo");
-  }
-  if (loan.status === newStatus) {
-    throw new Error(`Este empréstimo já está como "${newStatus}"`);
-  }
-
-  const updateData: { status: string; returned_at?: string | null; updated_at: string } = {
-    status: newStatus,
-    updated_at: new Date().toISOString(),
-  };
-  if (newStatus === "returned") {
-    updateData.returned_at = new Date().toISOString();
-  } else {
-    updateData.returned_at = null;
-  }
-
-  const { error: updateError } = await supabase
-    .from("loans")
-    .update(updateData)
-    .eq("id", loanId);
-
-  if (updateError) {
-    console.error("Erro ao atualizar empréstimo:", updateError.message);
-    throw new Error("Erro ao atualizar status do empréstimo");
-  }
-
-  revalidatePath("/admin/loans");
-}
-
 export default async function LoansPage({
   searchParams,
 }: {
@@ -140,8 +97,8 @@ export default async function LoansPage({
     .from('loans')
     .select('*', { count: 'exact', head: true })
     .eq('library_id', libraryId);
-    
-  const { data: loans, error  } = await supabase
+
+  const { data: loans, error } = await supabase
     .from('loans')
     .select(`
       id,
@@ -157,16 +114,15 @@ export default async function LoansPage({
     `)
     .eq('library_id', libraryId)
     .range(offset, offset + pageSize - 1)
-    .order ('borrowed_at', { ascending: false })
-    .returns<RawLoan[]>();
-
+    .order('borrowed_at', { ascending: false })
+    .returns<RawLoan[]>(); // Tipagem explícita do retorno
 
   if (error) {
     console.error("Erro ao buscar empréstimos:", error.message);
     throw new Error("Erro ao carregar histórico de empréstimos");
   }
 
-  const formattedLoans: Loan[] = loans?.map((loan) => {
+  const formattedLoans: Loan[] = (loans || []).map((loan) => {
     console.log("Loan:", loan.id, "Status:", loan.status); // Log para depuração
     return {
       id: loan.id,
@@ -177,10 +133,10 @@ export default async function LoansPage({
       due_date: loan.due_date,
       returned_at: loan.returned_at,
       status: loan.status,
-      book_title: loan.books.title || "Título não encontrado", // Ajustado
-      user_name: loan.users.full_name || "Usuário não encontrado", // Ajustado
+      book_title: loan.books.title || "Título não encontrado",
+      user_name: loan.users.full_name || "Usuário não encontrado",
     };
-  }) || [];
+  });
 
   const totalPages = Math.ceil((count || 0) / pageSize);
 
