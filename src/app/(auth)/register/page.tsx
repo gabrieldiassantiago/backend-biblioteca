@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, BookOpen, Mail, User, Lock, Library } from 'lucide-react';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -70,78 +72,135 @@ export default function RegisterPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      {/* Lado Esquerdo - Retângulo Preto */}
-      <div className="hidden md:flex w-full md:w-1/2 bg-black text-white flex-col justify-center items-center p-8">
-        <h1 className="text-4xl font-bold mb-4">Junte-se como Admin</h1>
-        <p className="text-lg text-center max-w-md">
-          Crie sua conta e sua biblioteca para começar a gerenciar hoje mesmo!
-        </p>
+    <div className="min-h-screen flex bg-background">
+      {/* Left Section - Illustration */}
+      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-primary/90 to-primary/70 justify-center items-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(to_bottom,transparent,white)]"></div>
+        <div className="relative z-10 text-center px-8 max-w-md">
+          <BookOpen className="mx-auto h-20 w-20 text-white mb-6 opacity-90" strokeWidth={1.5} />
+          <h1 className="text-3xl font-bold text-white mb-3">
+       Quero ser membro 
+          </h1>
+          <p className="text-white/80 text-lg">
+            Crie sua conta e sua biblioteca para começar a gerenciar hoje mesmo!
+          </p>
+        </div>
       </div>
 
-      {/* Lado Direito - Formulário */}
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-50 p-4">
+      {/* Right Section - Registration Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold">Registrar Administrador</h2>
-            <p className="text-sm text-muted-foreground">Preencha os dados para criar sua conta</p>
+          <div className="text-center space-y-2">
+            <BookOpen className="h-12 w-12 mx-auto text-primary lg:hidden" strokeWidth={1.5} />
+            <h2 className="text-2xl font-semibold text-foreground">Registrar Administrador</h2>
+            <p className="text-muted-foreground text-sm">
+              Preencha os dados para criar sua conta
+            </p>
           </div>
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Nome Completo</Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Seu Nome"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="border-gray-300"
-              />
+
+          {/* Error Alert */}
+          {error && (
+            <Alert variant="destructive" className="animate-in fade-in-50 slide-in-from-top-5">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleRegister} className="space-y-5">
+            <div className="space-y-4">
+              {/* Full Name Input */}
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="text-sm font-medium">
+                  Nome Completo
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="Seu Nome"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Email Input */}
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium">
+                  Senha
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Library Name Input */}
+              <div className="space-y-2">
+                <Label htmlFor="libraryName" className="text-sm font-medium">
+                  Nome da Biblioteca
+                </Label>
+                <div className="relative">
+                  <Library className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="libraryName"
+                    type="text"
+                    placeholder="Nome da Biblioteca"
+                    value={libraryName}
+                    onChange={(e) => setLibraryName(e.target.value)}
+                    required
+                    className="pl-10"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="libraryName">Nome da Biblioteca</Label>
-              <Input
-                id="libraryName"
-                type="text"
-                placeholder="Nome da Biblioteca"
-                value={libraryName}
-                onChange={(e) => setLibraryName(e.target.value)}
-                required
-                className="border-gray-300"
-              />
-            </div>
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+
+            {/* Submit Button */}
+            <Button 
+              type="submit" 
+              className="w-full font-medium"
+              disabled={loading}
+            >
               {loading ? 'Registrando...' : 'Registrar'}
             </Button>
+
+            {/* Login Link */}
             <p className="text-sm text-center text-muted-foreground">
               Já tem conta?{' '}
-              <Link href="/admin/auth/login" className="text-primary hover:underline">
+              <Link 
+                href="/login" 
+                className="text-primary hover:underline font-medium"
+              >
                 Faça login
               </Link>
             </p>
