@@ -13,6 +13,7 @@ import type { Book } from "./BookFormData"
 import { EditBookButton } from "./edit-book.button"
 
 async function getUserLibraryId() {
+  
   const supabase = await createClient()
   
   const { data: { user }, error: authError } = await supabase.auth.getUser()
