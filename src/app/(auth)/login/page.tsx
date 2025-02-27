@@ -12,7 +12,10 @@ interface LoginPageProps {
   searchParams: Promise<{ error?: string }>;
 }
 
-export default async function LoginPage({  }: LoginPageProps) {
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  // Await the searchParams prop since it’s a Promise
+  const resolvedSearchParams = await searchParams;
+  const error = resolvedSearchParams.error;
 
   async function handleLogin(formData: FormData) {
     'use server';
@@ -25,12 +28,6 @@ export default async function LoginPage({  }: LoginPageProps) {
     if (authError) {
       redirect('/login?error=Email ou senha inválidos');
     }
-
-  //se existir um usuário logado e ele for admin, redireciona para a página de administração
-  if (data.user.role === 'admin') {
-    redirect('/admin');
-  }
-    
 
     if (data.user) {
       const { data: userData, error: userError } = await supabase
@@ -48,7 +45,7 @@ export default async function LoginPage({  }: LoginPageProps) {
         redirect('/admin/');
       } else {
         await supabase.auth.signOut();
-      
+        redirect('/login?error=Apenas administradores podem acessar');
       }
     }
   }
@@ -58,7 +55,6 @@ export default async function LoginPage({  }: LoginPageProps) {
       {/* Left Section - Illustration */}
       <div className="hidden lg:flex w-1/2 bg-primary justify-center items-center relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(to_bottom,transparent,white)]"></div>
-        <div className="absolute top-10 left-10"></div>
         <div className="relative z-10 text-center px-8 max-w-md">
           <div className="mb-8">
             <div className="p-6 rounded-2xl backdrop-blur-sm mb-6 inline-block">
@@ -99,7 +95,7 @@ export default async function LoginPage({  }: LoginPageProps) {
           </div>
 
           {/* Error Alert Component */}
-          <ErrorAlert />
+          {error && <ErrorAlert />}
 
           <form action={handleLogin} className="space-y-5">
             <div className="space-y-4">
