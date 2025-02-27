@@ -1,167 +1,155 @@
-import { Inter } from 'next/font/google';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Home, Book, BookOpen, Settings } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
+import type React from "react"
+import { Inter } from "next/font/google"
+import { redirect } from "next/navigation"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Menu, Home, Book, BookOpen, Settings, LogOut } from "lucide-react"
+import { createClient } from "@/lib/supabase/server"
+import Image from "next/image"
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] })
 
 export default async function AdminLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  // Inicializa o cliente Supabase usando a função do server.ts
-  const supabase = await createClient();
+  const supabase = await createClient()
 
-  // Verifica o usuário autenticado
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    console.log('Erro na autenticação ou usuário não encontrado:', authError?.message || 'Sessão ausente');
-    redirect('/login');
+    console.log("Erro na autenticação ou usuário não encontrado:", authError?.message || "Sessão ausente")
+    redirect("/login")
   }
 
-  // Busca o role do usuário (prioriza user_metadata, depois a tabela users)
-  const roleFromMetadata = user.user_metadata?.role;
-  let role = roleFromMetadata;
+  const roleFromMetadata = user.user_metadata?.role
+  let role = roleFromMetadata
 
   if (!roleFromMetadata) {
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    const { data: userData, error: userError } = await supabase.from("users").select("role").eq("id", user.id).single()
 
     if (userError || !userData?.role) {
-      console.log('Erro ao buscar role ou role não encontrado:', userError?.message || 'Dados ausentes');
-      redirect('/login');
+      console.log("Erro ao buscar role ou role não encontrado:", userError?.message || "Dados ausentes")
+      redirect("/login")
     }
-    role = userData.role;
+    role = userData.role
   }
 
-  // Verifica se o usuário é admin
-  if (role !== 'admin') {
-    console.log('Acesso negado - Role do usuário:', role);
-    redirect('/login');
+  if (role !== "admin") {
+    console.log("Acesso negado - Role do usuário:", role)
+    redirect("/login")
   }
 
-  // Função de logout (Server Action)
   async function handleLogout() {
-    'use server';
-    const supabase = await createClient(); // Reutiliza a mesma função
-    await supabase.auth.signOut();
-    redirect('/login');
+    "use server"
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect("/login")
   }
+
+  const menuItems = [
+    { href: "/admin", icon: Home, label: "Dashboard" },
+    { href: "/admin/books", icon: Book, label: "Gerenciar Livros" },
+    { href: "/admin/loans", icon: BookOpen, label: "Gerenciar Empréstimos" },
+    { href: "/admin/settings", icon: Settings, label: "Configurações" },
+  ]
 
   return (
-    <div className={`${inter.className} antialiased bg-gray-50 flex min-h-screen flex-col md:flex-row`}>
-      {/* Menu Lateral (Desktop) */}
-      <aside className="hidden md:flex md:w-64 bg-white p-4 flex-col border-r border-gray-200 shadow-md">
-        <div className="mb-6">
-          <Link href="/admin/dashboard" className="text-2xl font-bold text-gray-900 hover:text-gray-700">
-            Biblioteca Digital
-          </Link>
-        </div>
-        <nav className="space-y-2">
-          <Link
-            href="/admin/dashboard"
-            className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-          >
-            <Home className="mr-3 h-5 w-5" />
-            Dashboard
-          </Link>
-          <Link
-            href="/admin/books"
-            className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-          >
-            <Book className="mr-3 h-5 w-5" />
-            Gerenciar Livros
-          </Link>
-          <Link
-            href="/admin/loans"
-            className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-          >
-            <BookOpen className="mr-3 h-5 w-5" />
-            Gerenciar Empréstimos
-          </Link>
-          <Link
-            href="/admin/settings"
-            className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-          >
-            <Settings className="mr-3 h-5 w-5" />
-            Configurações
-          </Link>
-        </nav>
-      </aside>
-
-      {/* Menu Mobile (Hamburguer) */}
-      <header className="md:hidden flex items-center p-4 bg-gray-900 text-white shadow-md">
+    <div className={`${inter.className} antialiased bg-gray-100 flex flex-col min-h-screen`}>
+      {/* Mobile Header */}
+      <header className="lg:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800">
+            <Button variant="ghost" size="icon" className="text-gray-700">
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 bg-white p-4 shadow-md">
-            <div className="mb-6">
-              <Link href="/admin/" className="text-2xl font-bold text-gray-900 hover:text-gray-700">
-                Biblioteca Digital
+          <SheetContent side="left" className="w-64 p-0">
+            <div className="h-16 flex items-center justify-center border-b border-gray-200">
+              <Link href="/admin" className="flex items-center space-x-2">
+                <Image src="/logounisal.svg" alt="Logo" width={32} height={32} />
+                <span className="text-xl font-semibold text-gray-800">Biblioteca Digital</span>
               </Link>
             </div>
-            <nav className="space-y-2">
-              <Link
-                href="/admin"
-                className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-              >
-                <Home className="mr-3 h-5 w-5" />
-                Dashboard
-              </Link>
-              <Link
-                href="/admin/books"
-                className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-              >
-                <Book className="mr-3 h-5 w-5" />
-                Gerenciar Livros
-              </Link>
-              <Link
-                href="/admin/loans"
-                className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-              >
-                <BookOpen className="mr-3 h-5 w-5" />
-                Gerenciar Empréstimos
-              </Link>
-              <Link
-                href="/admin/settings"
-                className="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-              >
-                <Settings className="mr-3 h-5 w-5" />
-                Configurações
-              </Link>
-              <form action={handleLogout} className="mt-4">
+            <nav className="flex-1 overflow-y-auto py-4">
+              {menuItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors duration-200"
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="p-4 border-t border-gray-200">
+              <form action={handleLogout}>
                 <Button
                   type="submit"
                   variant="outline"
-                  className="w-full text-gray-700 hover:bg-gray-100"
+                  className="w-full flex items-center justify-center text-gray-700 hover:bg-gray-100"
                 >
+                  <LogOut className="mr-2 h-4 w-4" />
                   Sair
                 </Button>
               </form>
-            </nav>
+            </div>
           </SheetContent>
         </Sheet>
-        <Link href="/" className="text-lg font-bold ml-2 text-white">
-          Biblioteca Digital
+        <Link href="/admin" className="flex items-center space-x-2">
+          <Image src="/logounisal.svg" alt="Logo" width={32} height={32} />
+          <span className="text-xl font-semibold text-gray-800">Biblioteca Digital</span>
         </Link>
+        <div className="w-8"></div> {/* Espaço para balancear o layout */}
       </header>
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 p-4 md:p-6 bg-gray-50">{children}</main>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar (Desktop) */}
+        <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-gray-200">
+          <div className="h-16 flex items-center justify-center border-b border-gray-200">
+            <Link href="/admin" className="flex items-center space-x-2">
+              <Image src="/logounisal.svg" alt="Logo" width={32} height={32} />
+              <span className="text-xl font-semibold text-gray-800">Biblioteca Digital</span>
+            </Link>
+          </div>
+          <nav className="flex-1 overflow-y-auto py-4">
+            {menuItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors duration-200"
+              >
+                <item.icon className="mr-3 h-5 w-5" />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="p-4 border-t border-gray-200">
+            <form action={handleLogout}>
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full flex items-center justify-center text-gray-700 hover:bg-gray-100"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </form>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-gray-100">
+          <div className="container mx-auto px-4 py-8">{children}</div>
+        </main>
+      </div>
     </div>
-  );
+  )
 }
+
