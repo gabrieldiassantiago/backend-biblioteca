@@ -4,70 +4,74 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
 import { useState, useEffect } from "react"
+import { getPopularBooks } from "@/app/(admin)/admin/books/actions"
 
-// Dados fictícios para demonstração
-const popularBooks = [
-  {
-    id: "1",
-    title: "O Senhor dos Anéis",
-    author: "J.R.R. Tolkien",
-    loans: 42,
-    available: 3,
-    stock: 5
-  },
-  {
-    id: "2",
-    title: "Harry Potter e a Pedra Filosofal",
-    author: "J.K. Rowling",
-    loans: 38,
-    available: 2,
-    stock: 4
-  },
-  {
-    id: "3",
-    title: "1984",
-    author: "George Orwell",
-    loans: 35,
-    available: 0,
-    stock: 3
-  },
-  {
-    id: "4",
-    title: "Dom Quixote",
-    author: "Miguel de Cervantes",
-    loans: 30,
-    available: 1,
-    stock: 2
-  },
-  {
-    id: "5",
-    title: "A Metamorfose",
-    author: "Franz Kafka",
-    loans: 28,
-    available: 2,
-    stock: 3
-  }
-]
+interface PopularBook {
+  id: string
+  title: string
+  author: string
+  loans: number
+  available: number
+  stock: number
+}
 
 export function PopularBooksTable() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [popularBooks, setPopularBooks] = useState<PopularBook[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Buscar dados dos livros populares
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const books = await getPopularBooks()
+        setPopularBooks(books)
+      } catch (error) {
+        console.error("Erro ao carregar livros populares:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   // Verificar o tamanho da tela quando o componente é montado
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
+      setIsMobile(window.innerWidth < 768)
+    }
+
     // Verificar inicialmente
-    handleResize();
-    
+    handleResize()
+
     // Adicionar listener para redimensionamento
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   // Renderização para dispositivos móveis
   const renderMobileView = () => {
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i} className="p-4">
+              <div className="h-6 w-3/4 animate-pulse rounded bg-muted mb-4"></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-4">
         {popularBooks.map((book) => (
@@ -76,16 +80,13 @@ export function PopularBooksTable() {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="text-muted-foreground">Autor:</div>
               <div>{book.author}</div>
-              
+
               <div className="text-muted-foreground">Empréstimos:</div>
               <div>{book.loans}</div>
-              
+
               <div className="text-muted-foreground">Disponibilidade:</div>
               <div className="flex items-center gap-2">
-                <Progress 
-                  value={(book.available / book.stock) * 100} 
-                  className="h-2 w-16"
-                />
+                <Progress value={(book.available / book.stock) * 100} className="h-2 w-16" />
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {book.available}/{book.stock}
                 </span>
@@ -94,11 +95,26 @@ export function PopularBooksTable() {
           </Card>
         ))}
       </div>
-    );
-  };
+    )
+  }
 
   // Renderização para desktop
   const renderDesktopView = () => {
+    if (loading) {
+      return (
+        <div className="w-full space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex w-full items-center space-x-4">
+              <div className="h-4 w-1/3 animate-pulse rounded bg-muted"></div>
+              <div className="h-4 w-1/4 animate-pulse rounded bg-muted"></div>
+              <div className="h-4 w-16 animate-pulse rounded bg-muted"></div>
+              <div className="h-4 w-1/4 animate-pulse rounded bg-muted"></div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
     return (
       <Table>
         <TableHeader>
@@ -117,10 +133,7 @@ export function PopularBooksTable() {
               <TableCell className="whitespace-nowrap">{book.loans}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2 min-w-[120px]">
-                  <Progress 
-                    value={(book.available / book.stock) * 100} 
-                    className="h-2"
-                  />
+                  <Progress value={(book.available / book.stock) * 100} className="h-2" />
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {book.available}/{book.stock}
                   </span>
@@ -130,16 +143,14 @@ export function PopularBooksTable() {
           ))}
         </TableBody>
       </Table>
-    );
-  };
+    )
+  }
 
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Livros Mais Populares</CardTitle>
-        <CardDescription>
-          Os 5 livros mais emprestados da biblioteca
-        </CardDescription>
+        <CardDescription>Os 5 livros mais emprestados da biblioteca</CardDescription>
       </CardHeader>
       <CardContent className={isMobile ? "" : "overflow-x-auto"}>
         {isMobile ? renderMobileView() : renderDesktopView()}
@@ -147,3 +158,4 @@ export function PopularBooksTable() {
     </Card>
   )
 }
+

@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import type { Book } from "./BookFormData";
 
 interface BookFormProps {
-  book?: Book; // Make this optional
+  book?: Book;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -104,7 +104,7 @@ export function BookForm({ book, open, onOpenChange }: BookFormProps) {
               min="0"
               max={stock}
               value={available}
-              onChange={(e) => setAvailable(parseInt(e.target.value))}
+              onChange={(e) => setAvailable(parseInt(e.target.value) || 0)}
               required
             />
           </div>

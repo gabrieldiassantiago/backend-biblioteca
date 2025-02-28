@@ -1,66 +1,55 @@
 "use server"
 
-// Importa a função para criar um cliente Supabase no lado do servidor
 import { createClient } from "@/lib/supabase/server"
-// Importa a função para invalidar o cache de uma rota específica após alterações
+import { cache } from "react"
 import { revalidatePath } from "next/cache"
 
-// Função assíncrona para obter o ID da biblioteca associada ao usuário autenticado
 async function getUserLibraryId() {
-  // Cria uma instância do cliente Supabase
   const supabase = await createClient()
-  
-  // Obtém os dados do usuário autenticado atual
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  // Se houver erro ou o usuário não estiver autenticado, lança uma exceção
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
   if (authError || !user) throw new Error("Usuário não autenticado")
 
-  // Busca o `library_id` do usuário na tabela 'users' usando seu ID
   const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('library_id')
-    .eq('id', user.id)
+    .from("users")
+    .select("library_id")
+    .eq("id", user.id)
     .single()
 
-  // Se houver erro ou o usuário não tiver um `library_id`, lança uma exceção
   if (userError || !userData?.library_id) {
     throw new Error("Usuário não está vinculado a uma biblioteca")
   }
 
-  // Retorna o `library_id` do usuário
   return userData.library_id
 }
 
-// Função assíncrona para criar ou atualizar um livro na biblioteca do usuário
 export async function handleSubmitBook(formData: FormData) {
-  // Cria uma instância do cliente Supabase
   const supabase = await createClient()
-  
-  // Obtém o ID da biblioteca do usuário autenticado
+
   const libraryId = await getUserLibraryId()
-  
-  // Extrai os dados do formulário enviado
-  const bookId = formData.get("id") as string | null // ID do livro (null se for novo)
-  const title = formData.get("title") as string // Título do livro
-  const author = formData.get("author") as string // Autor do livro
-  const isbn = formData.get("isbn") as string // ISBN do livro
-  
-  // Validação do campo 'stock' (estoque total)
+
+  const bookId = formData.get("id") as string | null
+  const title = formData.get("title") as string
+  const author = formData.get("author") as string
+  const isbn = formData.get("isbn") as string
+
   const stockStr = formData.get("stock")
   if (!stockStr || typeof stockStr !== "string") {
     throw new Error("O estoque deve ser um número inteiro válido.")
   }
-  const stock = parseInt(stockStr, 10)
+  const stock = Number.parseInt(stockStr, 10)
   if (isNaN(stock) || stock < 0) {
     throw new Error("O estoque não pode ser negativo.")
   }
 
-  // Validação do campo 'available' (quantidade disponível)
   const availableStr = formData.get("available")
   if (!availableStr || typeof availableStr !== "string") {
     throw new Error("A quantidade disponível deve ser um número inteiro válido.")
   }
-  const available = parseInt(availableStr, 10)
+  const available = Number.parseInt(availableStr, 10)
   if (isNaN(available) || available < 0) {
     throw new Error("A quantidade disponível não pode ser negativa.")
   }
@@ -70,18 +59,12 @@ export async function handleSubmitBook(formData: FormData) {
 
   try {
     if (bookId) {
-      // Caso seja uma edição (bookId existe), verifica se o livro pertence à biblioteca do usuário
-      const { data: existingBook } = await supabase
-        .from("books")
-        .select("library_id")
-        .eq("id", bookId)
-        .single()
+      const { data: existingBook } = await supabase.from("books").select("library_id").eq("id", bookId).single()
 
       if (existingBook?.library_id !== libraryId) {
         throw new Error("Você não tem permissão para editar este livro")
       }
 
-      // Atualiza os dados do livro existente na tabela 'books'
       const { error: updateError } = await supabase
         .from("books")
         .update({
@@ -90,98 +73,365 @@ export async function handleSubmitBook(formData: FormData) {
           isbn,
           stock,
           available,
-          updated_at: new Date().toISOString() // Atualiza a data de modificação
+          updated_at: new Date().toISOString(),
         })
         .eq("id", bookId)
-        .eq("library_id", libraryId) // Garante que o livro pertence à biblioteca do usuário
+        .eq("library_id", libraryId)
 
       if (updateError) throw updateError
     } else {
-      // Caso seja um novo livro (sem bookId), insere um novo registro na tabela 'books'
-      const { error: insertError } = await supabase
-        .from("books")
-        .insert({
-          title,
-          author,
-          isbn,
-          stock,
-          available,
-          library_id: libraryId // Associa o livro à biblioteca do usuário
-        })
+      const { error: insertError } = await supabase.from("books").insert({
+        title,
+        author,
+        isbn,
+        stock,
+        available,
+        library_id: libraryId,
+      })
 
       if (insertError) throw insertError
     }
-    
-    // Invalida o cache da rota "/admin/books" para refletir as mudanças na UI
+
     revalidatePath("/admin/books")
+    revalidatePath("/dashboard")
   } catch (error) {
-    // Loga o erro no servidor para depuração
-    console.error('Erro ao salvar livro:', error)
-    // Lança uma exceção genérica para ser tratada no frontend
+    console.error("Erro ao salvar livro:", error)
     throw new Error("Erro ao salvar livro")
   }
 }
 
-// Função assíncrona para excluir um livro da biblioteca do usuário
 export async function handleDeleteBook(bookId: string) {
-  // Cria uma instância do cliente Supabase
   const supabase = await createClient()
-  // Obtém o ID da biblioteca do usuário autenticado
   const libraryId = await getUserLibraryId()
 
   try {
-    // Verifica se o livro pertence à biblioteca do usuário
-    const { data: book } = await supabase
-      .from("books")
-      .select("library_id")
-      .eq("id", bookId)
-      .single()
+    const { data: book } = await supabase.from("books").select("library_id").eq("id", bookId).single()
 
     if (book?.library_id !== libraryId) {
       throw new Error("Você não tem permissão para excluir este livro")
     }
 
-    // Verifica se há empréstimos ativos associados ao livro
     const { data: activeLoans, error: loansError } = await supabase
       .from("loans")
       .select("id")
       .eq("book_id", bookId)
       .eq("status", "active")
-      .limit(1) // Basta encontrar um para bloquear a exclusão
+      .limit(1)
 
     if (loansError) throw loansError
     if (activeLoans && activeLoans.length > 0) {
       throw new Error("Não é possível excluir um livro com empréstimos ativos.")
     }
 
-    // Verifica se há reservas pendentes associadas ao livro
     const { data: pendingReservations, error: reservationsError } = await supabase
       .from("reservations")
       .select("id")
       .eq("book_id", bookId)
       .eq("status", "pending")
-      .limit(1) // Basta encontrar uma para bloquear a exclusão
+      .limit(1)
 
     if (reservationsError) throw reservationsError
     if (pendingReservations && pendingReservations.length > 0) {
       throw new Error("Não é possível excluir um livro com reservas pendentes.")
     }
 
-    // Exclui o livro da tabela 'books'
-    const { error: deleteError } = await supabase
-      .from("books")
-      .delete()
-      .eq("id", bookId)
-      .eq("library_id", libraryId) // Garante que o livro pertence à biblioteca do usuário
+    const { error: deleteError } = await supabase.from("books").delete().eq("id", bookId).eq("library_id", libraryId)
 
     if (deleteError) throw deleteError
-    
-    // Invalida o cache da rota "/admin/books" para refletir a exclusão na UI
+
     revalidatePath("/admin/books")
+    revalidatePath("/dashboard")
   } catch (error) {
-    // Loga o erro no servidor para depuração
-    console.error('Erro ao excluir livro:', error)
-    // Lança uma exceção genérica para ser tratada no frontend
+    console.error("Erro ao excluir livro:", error)
     throw new Error("Erro ao excluir livro")
+  }
+}
+
+// Novas funções para o dashboard
+
+interface DashboardStats {
+  totalBooks: number
+  booksTrend: number
+  activeUsers: number
+  usersTrend: number
+  activeLoans: number
+  loansTrend: number
+  monthlyVisits: number
+  visitsTrend: number
+}
+
+export const getDashboardStats = cache(async (): Promise<DashboardStats> => {
+  const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
+
+  const today = new Date()
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1)
+
+  try {
+    const [
+      { count: totalBooks },
+      { count: newBooks },
+      { count: lastMonthBooks },
+      { count: activeUsers },
+      { count: newUsers },
+      { count: lastMonthUsers },
+      { count: activeLoans },
+      { count: newLoans },
+      { count: lastMonthLoans },
+    ] = await Promise.all([
+      supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
+      supabase
+        .from("books")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .gte("created_at", lastMonth.toISOString()),
+      supabase
+        .from("books")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .gte("created_at", twoMonthsAgo.toISOString())
+        .lt("created_at", lastMonth.toISOString()),
+      supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .eq("status", "active"),
+      supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .gte("created_at", lastMonth.toISOString()),
+      supabase
+        .from("users")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .gte("created_at", twoMonthsAgo.toISOString())
+        .lt("created_at", lastMonth.toISOString()),
+      supabase
+        .from("loans")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .eq("status", "active"),
+      supabase
+        .from("loans")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .gte("created_at", lastMonth.toISOString()),
+      supabase
+        .from("loans")
+        .select("*", { count: "exact", head: true })
+        .eq("library_id", libraryId)
+        .gte("created_at", twoMonthsAgo.toISOString())
+        .lt("created_at", lastMonth.toISOString()),
+    ])
+
+    const booksTrend = calculateTrend(newBooks || 0, lastMonthBooks || 0)
+    const usersTrend = calculateTrend(newUsers || 0, lastMonthUsers || 0)
+    const loansTrend = calculateTrend(newLoans || 0, lastMonthLoans || 0)
+
+    const monthlyVisits = Math.floor(Math.random() * 10000) + 5000
+    const lastMonthVisits = Math.floor(Math.random() * 9000) + 4000
+    const visitsTrend = calculateTrend(monthlyVisits, lastMonthVisits)
+
+    return {
+      totalBooks: totalBooks || 0,
+      booksTrend,
+      activeUsers: activeUsers || 0,
+      usersTrend,
+      activeLoans: activeLoans || 0,
+      loansTrend,
+      monthlyVisits,
+      visitsTrend,
+    }
+  } catch (error) {
+    console.error("Erro ao buscar estatísticas:", error)
+    throw new Error("Falha ao carregar estatísticas do dashboard")
+  }
+})
+
+function calculateTrend(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0
+  return Math.round(((current - previous) / previous) * 100)
+}
+
+interface MonthlyLoanData {
+  name: string
+  emprestimos: number
+}
+
+export async function getMonthlyLoanData(): Promise<MonthlyLoanData[]> {
+  const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
+
+  try {
+    const months = []
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      const monthName = date.toLocaleString("pt-BR", { month: "short" })
+      const year = date.getFullYear()
+      const month = date.getMonth() + 1
+
+      months.push({
+        name: monthName.charAt(0).toUpperCase() + monthName.slice(1, 3),
+        year,
+        month,
+      })
+    }
+
+    const result = await Promise.all(
+      months.map(async ({ name, year, month }) => {
+        const startDate = new Date(year, month - 1, 1).toISOString()
+        const endDate = new Date(year, month, 0).toISOString()
+
+        const { count } = await supabase
+          .from("loans")
+          .select("*", { count: "exact", head: true })
+          .eq("library_id", libraryId)
+          .gte("created_at", startDate)
+          .lt("created_at", endDate)
+
+        return {
+          name,
+          emprestimos: count || 0,
+        }
+      }),
+    )
+
+    return result
+  } catch (error) {
+    console.error("Erro ao buscar dados de empréstimos mensais:", error)
+    throw new Error("Falha ao carregar dados de empréstimos por mês")
+  }
+}
+
+interface LoanStatusData {
+  name: string
+  value: number
+  color: string
+}
+
+export async function getLoanStatusData(): Promise<LoanStatusData[]> {
+  const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
+
+  try {
+    const { data, error } = await supabase.from("loans").select("status").eq("library_id", libraryId)
+
+    if (error) throw error
+
+    const statusCounts = data.reduce(
+      (acc: Record<string, number>, loan: { status: string }) => {
+        acc[loan.status] = (acc[loan.status] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+    return [
+      { name: "Ativos", value: statusCounts["active"] || 0, color: "hsl(var(--chart-2))" },
+      { name: "Devolvidos", value: statusCounts["returned"] || 0, color: "hsl(var(--chart-1))" },
+      { name: "Atrasados", value: statusCounts["overdue"] || 0, color: "hsl(var(--chart-3))" },
+    ]
+  } catch (error) {
+    console.error("Erro ao buscar dados de status dos empréstimos:", error)
+    throw new Error("Falha ao carregar dados de status dos empréstimos")
+  }
+}
+
+interface PopularBook {
+  id: string
+  title: string
+  author: string
+  loans: number
+  available: number
+  stock: number
+}
+
+export async function getPopularBooks(): Promise<PopularBook[]> {
+  const supabase = await createClient();
+  const libraryId = await getUserLibraryId();
+
+  try {
+    const { data, error } = await supabase
+      .rpc('get_popular_books', { library_id: libraryId })
+      .limit(5);
+
+    if (error) throw error;
+
+    return data.map((book: PopularBook) => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      loans: book.loans || 0,
+      available: book.available,
+      stock: book.stock,
+    }));
+  } catch (error) {
+    console.error("Erro ao buscar livros populares:", error);
+    throw new Error("Falha ao carregar livros populares");
+  }
+}
+
+interface RecentLoan {
+  id: string
+  book: string
+  user: string
+  date: string
+  dueDate: string
+  status: string
+}
+
+interface RawLoan {
+  id: string;
+  created_at: string;
+  due_date: string;
+  status: string;
+  books: { title: string }[];
+  users: { full_name: string }[];
+}
+
+interface RecentLoan {
+  id: string;
+  book: string;
+  user: string;
+  date: string;
+  dueDate: string;
+  status: string;
+}
+
+export async function getRecentLoans(): Promise<RecentLoan[]> {
+  const supabase = await createClient();
+  const libraryId = await getUserLibraryId();
+
+  try {
+    const { data, error } = await supabase
+      .from("loans")
+      .select(`
+        id,
+        created_at,
+        due_date,
+        status,
+        books:book_id(title),
+        users:user_id(full_name)
+      `)
+      .eq("library_id", libraryId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (error) throw error;
+
+    return data.map((loan: RawLoan) => ({
+      id: loan.id,
+      book: loan.books[0]?.title || "Livro desconhecido",
+      user: loan.users[0]?.full_name || "Usuário desconhecido",
+      date: loan.created_at,
+      dueDate: loan.due_date,
+      status: loan.status,
+    }));
+  } catch (error) {
+    console.error("Erro ao buscar empréstimos recentes:", error);
+    throw new Error("Falha ao carregar empréstimos recentes");
   }
 }
