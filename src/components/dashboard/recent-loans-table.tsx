@@ -3,43 +3,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { useState, useEffect } from "react"
-import { getRecentLoans } from "@/app/(admin)/admin/books/actions"
 
 interface RecentLoan {
-  id: string
-  book: string
-  user: string
-  date: string
-  dueDate: string
-  status: string
+  id: string;
+  book: string;
+  user: string;
+  date: string;
+  dueDate: string;
+  status: string;
 }
 
-export function RecentLoansTable() {
-  const [recentLoans, setRecentLoans] = useState<RecentLoan[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const loans = await getRecentLoans()
-        setRecentLoans(loans)
-      } catch (error) {
-        console.error("Erro ao carregar empréstimos recentes:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
-  // Função para formatar a data
+export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; loading: boolean }) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR")
   }
 
-  // Função para obter a cor do status
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -84,7 +62,7 @@ export function RecentLoansTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentLoans.map((loan) => (
+              {loans.map((loan) => (
                 <TableRow key={loan.id}>
                   <TableCell className="font-medium whitespace-nowrap">{loan.book}</TableCell>
                   <TableCell className="whitespace-nowrap">{loan.user}</TableCell>
@@ -100,4 +78,3 @@ export function RecentLoansTable() {
     </Card>
   )
 }
-

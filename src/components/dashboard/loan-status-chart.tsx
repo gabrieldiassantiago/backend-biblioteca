@@ -2,34 +2,14 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
-import { useEffect, useState } from "react"
-import { getLoanStatusData } from "@/app/(admin)/admin/books/actions"
 
 interface LoanStatusData {
-  name: string
-  value: number
-  color: string
+  name: string;
+  value: number;
+  color: string;
 }
 
-export function LoanStatusChart() {
-  const [data, setData] = useState<LoanStatusData[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const statusData = await getLoanStatusData()
-        setData(statusData)
-      } catch (error) {
-        console.error("Erro ao carregar dados de status:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
+export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loading: boolean }) {
   return (
     <Card className="w-full">
       <CardHeader>
@@ -76,4 +56,3 @@ export function LoanStatusChart() {
     </Card>
   )
 }
-

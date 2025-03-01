@@ -28,7 +28,6 @@ async function getUserLibraryId() {
 
 export async function handleSubmitBook(formData: FormData) {
   const supabase = await createClient()
-
   const libraryId = await getUserLibraryId()
 
   const bookId = formData.get("id") as string | null
@@ -147,8 +146,6 @@ export async function handleDeleteBook(bookId: string) {
   }
 }
 
-// Novas funções para o dashboard
-
 interface DashboardStats {
   totalBooks: number
   booksTrend: number
@@ -181,49 +178,14 @@ export const getDashboardStats = cache(async (): Promise<DashboardStats> => {
       { count: lastMonthLoans },
     ] = await Promise.all([
       supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
-      supabase
-        .from("books")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .gte("created_at", lastMonth.toISOString()),
-      supabase
-        .from("books")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .gte("created_at", twoMonthsAgo.toISOString())
-        .lt("created_at", lastMonth.toISOString()),
-      supabase
-        .from("users")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .eq("status", "active"),
-      supabase
-        .from("users")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .gte("created_at", lastMonth.toISOString()),
-      supabase
-        .from("users")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .gte("created_at", twoMonthsAgo.toISOString())
-        .lt("created_at", lastMonth.toISOString()),
-      supabase
-        .from("loans")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .eq("status", "active"),
-      supabase
-        .from("loans")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .gte("created_at", lastMonth.toISOString()),
-      supabase
-        .from("loans")
-        .select("*", { count: "exact", head: true })
-        .eq("library_id", libraryId)
-        .gte("created_at", twoMonthsAgo.toISOString())
-        .lt("created_at", lastMonth.toISOString()),
+      supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+      supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+      supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
+      supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+      supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+      supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
+      supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+      supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
     ])
 
     const booksTrend = calculateTrend(newBooks || 0, lastMonthBooks || 0)
@@ -350,15 +312,15 @@ interface PopularBook {
 }
 
 export async function getPopularBooks(): Promise<PopularBook[]> {
-  const supabase = await createClient();
-  const libraryId = await getUserLibraryId();
+  const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
 
   try {
     const { data, error } = await supabase
       .rpc('get_popular_books', { library_id: libraryId })
-      .limit(5);
+      .limit(5)
 
-    if (error) throw error;
+    if (error) throw error
 
     return data.map((book: PopularBook) => ({
       id: book.id,
@@ -367,10 +329,10 @@ export async function getPopularBooks(): Promise<PopularBook[]> {
       loans: book.loans || 0,
       available: book.available,
       stock: book.stock,
-    }));
+    }))
   } catch (error) {
-    console.error("Erro ao buscar livros populares:", error);
-    throw new Error("Falha ao carregar livros populares");
+    console.error("Erro ao buscar livros populares:", error)
+    throw new Error("Falha ao carregar livros populares")
   }
 }
 
@@ -384,26 +346,17 @@ interface RecentLoan {
 }
 
 interface RawLoan {
-  id: string;
-  created_at: string;
-  due_date: string;
-  status: string;
-  books: { title: string }[];
-  users: { full_name: string }[];
-}
-
-interface RecentLoan {
-  id: string;
-  book: string;
-  user: string;
-  date: string;
-  dueDate: string;
-  status: string;
+  id: string
+  created_at: string
+  due_date: string
+  status: string
+  books: { title: string } | null
+  users: { full_name: string } | null
 }
 
 export async function getRecentLoans(): Promise<RecentLoan[]> {
-  const supabase = await createClient();
-  const libraryId = await getUserLibraryId();
+  const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
 
   try {
     const { data, error } = await supabase
@@ -418,20 +371,155 @@ export async function getRecentLoans(): Promise<RecentLoan[]> {
       `)
       .eq("library_id", libraryId)
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(5)
 
-    if (error) throw error;
+    if (error) throw error
 
-    return data.map((loan: RawLoan) => ({
+    // Conversão dupla para contornar a inferência do TypeScript
+    return (data as unknown as RawLoan[]).map((loan) => ({
       id: loan.id,
-      book: loan.books[0]?.title || "Livro desconhecido",
-      user: loan.users[0]?.full_name || "Usuário desconhecido",
+      book: loan.books?.title || "Livro desconhecido",
+      user: loan.users?.full_name || "Usuário desconhecido",
       date: loan.created_at,
       dueDate: loan.due_date,
       status: loan.status,
-    }));
+    }))
   } catch (error) {
-    console.error("Erro ao buscar empréstimos recentes:", error);
-    throw new Error("Falha ao carregar empréstimos recentes");
+    console.error("Erro ao buscar empréstimos recentes:", error)
+    throw new Error("Falha ao carregar empréstimos recentes")
   }
 }
+
+export const getAllDashboardData = cache(async () => {
+  const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
+
+  const today = new Date()
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1)
+
+  try {
+    const [
+      statsResponse,
+      monthlyLoansResponse,
+      loanStatusResponse,
+      popularBooksResponse,
+      recentLoansResponse,
+    ] = await Promise.all([
+      Promise.all([
+        supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
+        supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+        supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
+        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+        supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
+        supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+        supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+      ]),
+      (async () => {
+        const months = []
+        for (let i = 3; i >= 0; i--) {
+          const date = new Date()
+          date.setMonth(date.getMonth() - i)
+          const startDate = new Date(date.getFullYear(), date.getMonth(), 1).toISOString()
+          const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString()
+          const { count } = await supabase
+            .from("loans")
+            .select("*", { count: "exact", head: true })
+            .eq("library_id", libraryId)
+            .gte("created_at", startDate)
+            .lt("created_at", endDate)
+          months.push({
+            name: date.toLocaleString("pt-BR", { month: "short" }).charAt(0).toUpperCase() + date.toLocaleString("pt-BR", { month: "short" }).slice(1, 3),
+            emprestimos: count || 0
+          })
+        }
+        return months
+      })(),
+      supabase.from("loans").select("status").eq("library_id", libraryId),
+      supabase.rpc('get_popular_books', { library_id: libraryId }).limit(5),
+      supabase
+        .from("loans")
+        .select("id, created_at, due_date, status, books:book_id(title), users:user_id(full_name)")
+        .eq("library_id", libraryId)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ])
+
+    // Processar Stats
+    const [
+      totalBooks,
+      newBooks,
+      lastMonthBooks,
+      activeUsers,
+      newUsers,
+      lastMonthUsers,
+      activeLoans,
+      newLoans,
+      lastMonthLoans,
+    ] = statsResponse.map(r => r.count || 0)
+    const booksTrend = calculateTrend(newBooks, lastMonthBooks)
+    const usersTrend = calculateTrend(newUsers, lastMonthUsers)
+    const loansTrend = calculateTrend(newLoans, lastMonthLoans)
+    const monthlyVisits = Math.floor(Math.random() * 10000) + 5000
+    const lastMonthVisits = Math.floor(Math.random() * 9000) + 4000
+    const visitsTrend = calculateTrend(monthlyVisits, lastMonthVisits)
+
+    const stats = {
+      totalBooks,
+      booksTrend,
+      activeUsers,
+      usersTrend,
+      activeLoans,
+      loansTrend,
+      monthlyVisits,
+      visitsTrend,
+    }
+
+    // Processar Loan Status
+    const statusCounts = (loanStatusResponse.data ?? []).reduce(
+      (acc: Record<string, number>, loan: { status: string }) => {
+        acc[loan.status] = (acc[loan.status] || 0) + 1
+        return acc
+      },
+      {}
+    )
+    const loanStatus = [
+      { name: "Ativos", value: statusCounts["active"] || 0, color: "hsl(var(--chart-2))" },
+      { name: "Devolvidos", value: statusCounts["returned"] || 0, color: "hsl(var(--chart-1))" },
+      { name: "Atrasados", value: statusCounts["overdue"] || 0, color: "hsl(var(--chart-3))" },
+    ]
+
+    // Processar Popular Books
+    const popularBooks = (popularBooksResponse.data ?? []).map((book: PopularBook) => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      loans: book.loans || 0,
+      available: book.available,
+      stock: book.stock,
+    }))
+
+    // Processar Recent Loans com conversão dupla
+    const recentLoans = (recentLoansResponse.data as unknown as RawLoan[] ?? []).map((loan) => ({
+      id: loan.id,
+      book: loan.books?.title || "Livro desconhecido",
+      user: loan.users?.full_name || "Usuário desconhecido",
+      date: loan.created_at,
+      dueDate: loan.due_date,
+      status: loan.status,
+    }))
+
+    return {
+      stats,
+      monthlyLoans: monthlyLoansResponse,
+      loanStatus,
+      popularBooks,
+      recentLoans,
+    }
+  } catch (error) {
+    console.error("Erro ao buscar todos os dados do dashboard:", error)
+    throw error
+  }
+})

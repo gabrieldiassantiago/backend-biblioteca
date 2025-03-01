@@ -10,6 +10,7 @@ import { MoreHorizontal } from "lucide-react"
 import { Suspense } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UpdateLoanForm } from "./update-loan-form"
+import { CreateLoanModal } from "./createloan"
 
 // Função para obter o library_id do usuário autenticado
 async function getUserLibraryId() {

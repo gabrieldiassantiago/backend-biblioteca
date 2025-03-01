@@ -7,13 +7,42 @@ import { RecentLoansTable } from "@/components/dashboard/recent-loans-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Book, Users, BookOpen, TrendingUp } from 'lucide-react'
 import { useEffect, useState } from "react"
-import { getDashboardStats } from "./books/actions"
+import { getAllDashboardData } from "./books/actions"
 
 interface DashboardStat {
   title: string;
   value: string;
   icon: React.ElementType;
   trend: string;
+}
+
+interface MonthlyLoanData {
+  name: string;
+  emprestimos: number;
+}
+
+interface LoanStatusData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface PopularBook {
+  id: string;
+  title: string;
+  author: string;
+  loans: number;
+  available: number;
+  stock: number;
+}
+
+interface RecentLoan {
+  id: string;
+  book: string;
+  user: string;
+  date: string;
+  dueDate: string;
+  status: string;
 }
 
 export default function AdminDashboardPage() {
@@ -23,46 +52,60 @@ export default function AdminDashboardPage() {
     { title: "Empréstimos Ativos", value: "...", icon: BookOpen, trend: "..." },
     { title: "Visitas Mensais", value: "...", icon: TrendingUp, trend: "..." },
   ])
+  const [monthlyLoans, setMonthlyLoans] = useState<MonthlyLoanData[]>([])
+  const [loanStatus, setLoanStatus] = useState<LoanStatusData[]>([])
+  const [popularBooks, setPopularBooks] = useState<PopularBook[]>([])
+  const [recentLoans, setRecentLoans] = useState<RecentLoan[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getDashboardStats()
+        const data = await getAllDashboardData()
         setStats([
           { 
             title: "Total de Livros", 
-            value: data.totalBooks.toString(), 
+            value: data.stats.totalBooks.toString(), 
             icon: Book, 
-            trend: `${data.booksTrend > 0 ? '+' : ''}${data.booksTrend}%` 
+            trend: `${data.stats.booksTrend > 0 ? '+' : ''}${data.stats.booksTrend}%` 
           },
           { 
             title: "Usuários Ativos", 
-            value: data.activeUsers.toString(), 
+            value: data.stats.activeUsers.toString(), 
             icon: Users, 
-            trend: `${data.usersTrend > 0 ? '+' : ''}${data.usersTrend}%` 
+            trend: `${data.stats.usersTrend > 0 ? '+' : ''}${data.stats.usersTrend}%` 
           },
           { 
             title: "Empréstimos Ativos", 
-            value: data.activeLoans.toString(), 
+            value: data.stats.activeLoans.toString(), 
             icon: BookOpen, 
-            trend: `${data.loansTrend > 0 ? '+' : ''}${data.loansTrend}%` 
+            trend: `${data.stats.loansTrend > 0 ? '+' : ''}${data.stats.loansTrend}%` 
           },
           { 
             title: "Visitas Mensais", 
-            value: data.monthlyVisits.toString(), 
+            value: data.stats.monthlyVisits.toString(), 
             icon: TrendingUp, 
-            trend: `${data.visitsTrend > 0 ? '+' : ''}${data.visitsTrend}%` 
+            trend: `${data.stats.visitsTrend > 0 ? '+' : ''}${data.stats.visitsTrend}%` 
           },
         ])
+        setMonthlyLoans(data.monthlyLoans)
+        setLoanStatus(data.loanStatus)
+        setPopularBooks(data.popularBooks)
+        setRecentLoans(data.recentLoans)
       } catch (error) {
-        console.error("Erro ao carregar estatísticas:", error)
+        console.error("Erro ao carregar dados do dashboard:", error)
+        setStats([
+          { title: "Total de Livros", value: "0", icon: Book, trend: "0%" },
+          { title: "Usuários Ativos", value: "0", icon: Users, trend: "0%" },
+          { title: "Empréstimos Ativos", value: "0", icon: BookOpen, trend: "0%" },
+          { title: "Visitas Mensais", value: "0", icon: TrendingUp, trend: "0%" },
+        ])
       } finally {
         setLoading(false)
       }
     }
 
-    fetchStats()
+    fetchData()
   }, [])
 
   return (
@@ -100,13 +143,13 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <BookLoanChart />
-        <LoanStatusChart />
+        <BookLoanChart data={monthlyLoans} loading={loading} />
+        <LoanStatusChart data={loanStatus} loading={loading} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <RecentLoansTable />
-        <PopularBooksTable />
+        <RecentLoansTable loans={recentLoans} loading={loading} />
+        <PopularBooksTable books={popularBooks} loading={loading} />
       </div>
     </div>
   )

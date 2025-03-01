@@ -1,7 +1,38 @@
-// src/lib/actions.ts
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+// Interface para Livro
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  available: number; // Ajustado para number conforme seu código
+  stock: number;
+}
+
+// Interface para Empréstimo
+interface Loan {
+  id: string;
+  book: Book;
+  borrowed_at: string;
+  due_date: string;
+  status: "active" | "returned" | "overdue";
+}
+
+// Interface para os dados brutos retornados do Supabase em fetchUserLoans
+interface RawLoan {
+  id: string;
+  borrowed_at: string;
+  due_date: string;
+  status: "active" | "returned" | "overdue";
+  books: {
+    title: string;
+    author: string;
+  } | null; // Pode ser null se o join falhar
+}
 
 export async function handleRegisterAndBorrow(formData: FormData) {
   console.log("Iniciando handleRegisterAndBorrow");
@@ -129,4 +160,123 @@ export async function handleBorrow(formData: FormData) {
   console.log("Empréstimo criado com sucesso");
 
   return { success: true, message: "Empréstimo realizado com sucesso!" };
+}
+
+export async function handleLogout() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/");
+  redirect("/");
+}
+
+export async function fetchUserLoans(userId: string): Promise<Loan[]> {
+  const supabase = await createClient();
+
+  if (!userId) {
+    throw new Error("userId é obrigatório");
+  }
+
+  const { data, error } = await supabase
+    .from("loans")
+    .select(`
+      id,
+      borrowed_at,
+      due_date,
+      status,
+      books (title, author)
+    `)
+    .eq("user_id", userId)
+    .order("borrowed_at", { ascending: false })
+    .limit(5)
+    .returns<RawLoan[]>();
+
+  if (error) {
+    console.error("Erro ao buscar empréstimos:", error.message);
+    throw new Error("Erro ao buscar empréstimos: " + error.message);
+  }
+
+  // Normalizar os dados para corresponder à interface Loan
+  const normalizedLoans: Loan[] = (data || []).map((loan: RawLoan) => ({
+    id: loan.id,
+    book: {
+      id: "", // Não estamos selecionando o book_id, ajuste se necessário
+      title: loan.books?.title || "Título não encontrado",
+      author: loan.books?.author || "Autor não encontrado",
+      available: 0, // Livro emprestado, não disponível
+      stock: 0, // Não temos essa info aqui, ajuste se precisar
+    },
+    borrowed_at: loan.borrowed_at,
+    due_date: loan.due_date,
+    status: loan.status,
+  }));
+
+  return normalizedLoans;
+}
+
+export async function handleLogin(formData: FormData) {
+  console.log("Iniciando handleLogin");
+  const supabase = await createClient();
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+
+  console.log("Dados de login recebidos:", { email });
+
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (authError || !authData.user) {
+    console.error("Erro ao fazer login:", authError?.message);
+    throw new Error("Erro ao fazer login: " + authError?.message);
+  }
+
+  console.log("Login bem-sucedido, usuário ID:", authData.user.id);
+  return { success: true, message: "Login realizado com sucesso!" };
+}
+
+export async function getLibraryBySlug(slug: string) {
+  const supabase = await createClient();
+  const { data: library, error } = await supabase
+    .from("libraries")
+    .select("*")
+    .eq("name", slug)
+    .single();
+
+  if (error || !library) {
+    console.error("Erro ao buscar biblioteca:", error?.message || "Biblioteca não encontrada");
+    return null;
+  }
+  return library;
+}
+
+export async function getBooksByLibraryId(libraryId: string, searchQuery: string, page: number, limit: number) {
+  const supabase = await createClient();
+  let query = supabase.from("books").select("*", { count: "exact" }).eq("library_id", libraryId);
+
+  if (searchQuery) {
+    query = query.or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`);
+  }
+
+  const offset = (page - 1) * limit;
+  const { data: books, error, count } = await query.range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error("Erro ao buscar livros:", error.message);
+    return { books: [], count: 0 };
+  }
+  return { books, count };
+}
+
+export async function getUserSession() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) {
+    console.log("Nenhum usuário logado ou erro na sessão:", error?.message);
+    return null;
+  }
+  return { id: user.id, email: user.email };
 }

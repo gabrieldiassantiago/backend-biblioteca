@@ -2,33 +2,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { useEffect, useState } from "react"
-import { getMonthlyLoanData } from "@/app/(admin)/admin/books/actions"
 
 interface MonthlyLoanData {
-  name: string
-  emprestimos: number
+  name: string;
+  emprestimos: number;
 }
 
-export function BookLoanChart() {
-  const [data, setData] = useState<MonthlyLoanData[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const loanData = await getMonthlyLoanData()
-        setData(loanData)
-      } catch (error) {
-        console.error("Erro ao carregar dados de empréstimos:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
+export function BookLoanChart({ data, loading }: { data: MonthlyLoanData[]; loading: boolean }) {
   return (
     <Card className="w-full">
       <CardHeader>
@@ -63,4 +43,3 @@ export function BookLoanChart() {
     </Card>
   )
 }
-
