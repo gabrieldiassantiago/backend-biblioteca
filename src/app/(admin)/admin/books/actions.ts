@@ -192,7 +192,7 @@ export const getDashboardStats = cache(async (): Promise<DashboardStats> => {
     const usersTrend = calculateTrend(newUsers || 0, lastMonthUsers || 0)
     const loansTrend = calculateTrend(newLoans || 0, lastMonthLoans || 0)
 
-    const monthlyVisits = Math.floor(Math.random() * 10000) + 5000
+    const monthlyVisits = Math.floor(Math.random() * 10000)
     const lastMonthVisits = Math.floor(Math.random() * 9000) + 4000
     const visitsTrend = calculateTrend(monthlyVisits, lastMonthVisits)
 

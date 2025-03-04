@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useState, useEffect } from "react"
 
 interface PopularBook {
@@ -33,14 +34,14 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
             <Card key={i} className="p-4">
-              <div className="h-6 w-3/4 animate-pulse rounded bg-muted mb-4"></div>
+              <Skeleton className="h-6 w-3/4 mb-4" />
               <div className="grid grid-cols-2 gap-2">
-                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
-                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
-                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
-                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
-                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
-                <div className="h-4 w-full animate-pulse rounded bg-muted"></div>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
               </div>
             </Card>
           ))}
@@ -78,10 +79,10 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
         <div className="w-full space-y-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex w-full items-center space-x-4">
-              <div className="h-4 w-1/3 animate-pulse rounded bg-muted"></div>
-              <div className="h-4 w-1/4 animate-pulse rounded bg-muted"></div>
-              <div className="h-4 w-16 animate-pulse rounded bg-muted"></div>
-              <div className="h-4 w-1/4 animate-pulse rounded bg-muted"></div>
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-1/4" />
             </div>
           ))}
         </div>

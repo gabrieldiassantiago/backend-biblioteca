@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Loader2 } from 'lucide-react';
-import { AddBookButton } from "./add-book-button";
-import { BookList } from "./book-list";
+import { AddBookButton } from "../../../../components/books/add-book-button";
+import { BookList } from "../../../../components/books/book-list";
 
 export default function BooksPage() {
   return (

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { DeleteBookButton } from "./delete-book-button"
-import type { Book } from "./BookFormData"
+import type { Book } from "../../app/(admin)/admin/books/types/BookFormData"
 import { EditBookButton } from "./edit-book.button"
 
 async function getUserLibraryId() {

@@ -19,7 +19,7 @@ interface Loan {
   book: Book;
   borrowed_at: string;
   due_date: string;
-  status: "active" | "returned" | "overdue";
+  status: "active" | "returned" | "overdue"; //active é emprestado, returned é devolvido, overdue é atrasado
 }
 
 // Interface para os dados brutos retornados do Supabase em fetchUserLoans

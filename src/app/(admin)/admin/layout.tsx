@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Home, Book, BookOpen, Settings, LogOut } from "lucide-react"
+import { Menu, Home, Book, BookOpen, LogOut, User } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import Image from "next/image"
 
@@ -56,7 +56,7 @@ export default async function AdminLayout({
     { href: "/admin", icon: Home, label: "Dashboard" },
     { href: "/admin/books", icon: Book, label: "Gerenciar Livros" },
     { href: "/admin/loans", icon: BookOpen, label: "Gerenciar Empréstimos" },
-    { href: "/admin/settings", icon: Settings, label: "Configurações" },
+    { href: "/admin/users", icon: User, label: "Alunos" },
   ]
 
   return (

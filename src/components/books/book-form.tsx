@@ -9,9 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { handleSubmitBook } from "./actions";
+import { handleSubmitBook } from "../../app/(admin)/admin/books/actions";
 import { toast } from "sonner";
-import type { Book } from "./BookFormData";
+import type { Book } from "../../app/(admin)/admin/books/types/BookFormData";
 
 interface BookFormProps {
   book?: Book;
@@ -23,7 +23,7 @@ export function BookForm({ book, open, onOpenChange }: BookFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [stock, setStock] = useState(book?.stock ?? 1);
-  const [available, setAvailable] = useState(book?.available ? 1 : 0);
+  const [available, setAvailable] = useState(book?.available ?? 1);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
