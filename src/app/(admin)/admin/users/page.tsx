@@ -18,6 +18,8 @@ function TableSkeleton() {
           <TableRow>
             <TableHead>Nome Completo</TableHead>
             <TableHead>Email</TableHead>
+            <TableHead>Turma</TableHead> {/* Nova coluna */}
+            <TableHead>Série/Ano</TableHead> {/* Nova coluna */}
             <TableHead>Cargo</TableHead>
             <TableHead>Data de Criação</TableHead>
           </TableRow>
@@ -27,6 +29,8 @@ function TableSkeleton() {
             <TableRow key={index}>
               <TableCell><Skeleton className="h-5 w-[180px]" /></TableCell>
               <TableCell><Skeleton className="h-5 w-[200px]" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell> 
+              <TableCell><Skeleton className="h-5 w-[100px]" /></TableCell> 
               <TableCell><Skeleton className="h-5 w-[100px]" /></TableCell>
               <TableCell><Skeleton className="h-5 w-[120px]" /></TableCell>
             </TableRow>
@@ -37,7 +41,7 @@ function TableSkeleton() {
   );
 }
 
-// Componente de Skeleton para os cards
+// Componente de Skeleton para os cards 
 function CardSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-4 md:hidden">
@@ -54,6 +58,8 @@ function CardSkeleton() {
               <div className="space-y-2">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" /> 
+                <Skeleton className="h-4 w-1/2" /> 
               </div>
             </div>
           </CardContent>
@@ -80,11 +86,9 @@ function PaginationSkeleton() {
   );
 }
 
-// Componente principal que carrega os dados
 async function StudentsContent({ searchParams }: { searchParams: Promise<{ search?: string; page?: string }> }) {
   const supabase = await createClient();
 
-  // Função para formatar a role
   const formatarRole = (role: string) => {
     switch (role) {
       case 'student':
@@ -96,7 +100,6 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
     }
   };
 
-  // Verifica o usuário autenticado
   const {
     data: { user },
     error: authError,
@@ -104,10 +107,9 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
 
   if (authError || !user) {
     console.log('Erro na autenticação ou usuário não encontrado:', authError?.message || 'Sessão ausente');
-    return null; // O layout já redireciona
+    return null;
   }
 
-  // Busca o role do usuário
   const roleFromMetadata = user.user_metadata?.role;
   let role = roleFromMetadata;
 
@@ -125,13 +127,11 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
     role = userData.role;
   }
 
-  // Verifica se o usuário é admin
   if (role !== 'admin') {
     console.log('Acesso negado - Role do usuário:', role);
     return null;
   }
 
-  // Obter o library_id do admin
   const { data: userLibrary, error: libraryError } = await supabase
     .from('users')
     .select('library_id')
@@ -159,17 +159,16 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
 
   const libraryId = userLibrary.library_id;
 
-  // Parâmetros de busca e paginação
   const params = await searchParams;
   const searchQuery = params.search || '';
   const page = parseInt(params.page || '1', 10);
   const limit = 10;
   const offset = (page - 1) * limit;
 
-  // Buscar alunos da biblioteca
-  let query = supabase
+//aqui é a consulta dos dados que precisamos e vao ser  exibidos na tabela
+   let query = supabase
     .from('users')
-    .select('*', { count: 'exact' })
+    .select('id, full_name, email, role, created_at, class, grade', { count: 'exact' }) // Adicionados class e grade
     .eq('library_id', libraryId)
     .eq('role', 'student');
 
@@ -212,13 +211,15 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
         </div>
       )}
 
-      {/* Desktop Table View */}
+      {/* para pc*/}
       <div className="hidden md:block rounded-lg border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome Completo</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Turma</TableHead> {/* Nova coluna */}
+              <TableHead>Série/Ano</TableHead> {/* Nova coluna */}
               <TableHead>Cargo</TableHead>
               <TableHead>Data de Criação</TableHead>
             </TableRow>
@@ -229,6 +230,8 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
                 <TableRow key={student.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">{student.full_name}</TableCell>
                   <TableCell>{student.email}</TableCell>
+                  <TableCell>{student.class || '-'}</TableCell> {/* Exibe Turma */}
+                  <TableCell>{student.grade || '-'}</TableCell> {/* Exibe Série */}
                   <TableCell>
                     <Badge variant="outline" className="bg-primary/10 text-primary">
                       {formatarRole(student.role)}
@@ -239,7 +242,7 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center"> {/* Ajustado para 6 colunas */}
                   Nenhum aluno encontrado.
                 </TableCell>
               </TableRow>
@@ -266,6 +269,14 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Email:</span>
                     <span className="font-medium">{student.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Turma:</span>
+                    <span>{student.class || '-'}</span> {/* Exibe Turma */}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Série:</span>
+                    <span>{student.grade || '-'}</span> {/* Exibe Série */}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Criado em:</span>
@@ -305,14 +316,12 @@ async function StudentsContent({ searchParams }: { searchParams: Promise<{ searc
             
             <div className="flex items-center space-x-1">
               {Array.from({ length: totalPages }, (_, i) => {
-                // Show first page, last page, current page, and pages around current
                 const pageNum = i + 1;
                 const showPage = 
                   pageNum === 1 || 
                   pageNum === totalPages || 
                   (pageNum >= page - 1 && pageNum <= page + 1);
                 
-                // Show ellipsis for gaps
                 const showEllipsisBefore = i === 1 && page > 3;
                 const showEllipsisAfter = i === totalPages - 2 && page < totalPages - 2;
                 

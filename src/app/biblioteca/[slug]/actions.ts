@@ -43,6 +43,9 @@ export async function handleRegisterAndBorrow(formData: FormData) {
   const fullName = formData.get("fullName") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const classe = formData.get("class") as string;
+  const grade = formData.get("grade") as string;     // captura os dados do formulário
+
 
   console.log("Dados recebidos:", { bookId, libraryId, slug, fullName, email });
 
@@ -67,6 +70,8 @@ export async function handleRegisterAndBorrow(formData: FormData) {
       email,
       full_name: fullName,
       role: "student",
+      class: classe,
+      grade: grade,
       library_id: libraryId,
     });
 
@@ -75,6 +80,14 @@ export async function handleRegisterAndBorrow(formData: FormData) {
     throw new Error("Erro ao registrar usuário na biblioteca: " + userInsertError.message);
   }
   console.log("Usuário inserido na tabela users");
+
+  //esse if serve pra poder evitar problema no registro, pois aqui ele vai considerar que o usuario pode já existir ou não, ou seja, ele ainda precisa criar uma conta
+  if (!bookId || bookId === "") {
+    return { success: true, message: "Conta criada com sucesso!" };
+  }
+
+  //se ele passar por este if, ele vai tentar registrar o emprestimo + criar uma nova conta, isso depende das condições
+
 
   const { data: book, error: bookError } = await supabase
     .from("books")
@@ -199,7 +212,7 @@ export async function fetchUserLoans(userId: string): Promise<Loan[]> {
   const normalizedLoans: Loan[] = (data || []).map((loan: RawLoan) => ({
     id: loan.id,
     book: {
-      id: "", // Não estamos selecionando o book_id, ajuste se necessário
+      id: "", // Não estamos selecionando o book_id
       title: loan.books?.title || "Título não encontrado",
       author: loan.books?.author || "Autor não encontrado",
       available: 0, // Livro emprestado, não disponível

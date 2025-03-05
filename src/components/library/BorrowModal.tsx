@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, BookOpen, CheckCircle, UserPlus, LogIn, Mail, Lock, User, Calendar } from 'lucide-react';
+import { X, BookOpen, CheckCircle, UserPlus, LogIn, Mail, Lock, User, Calendar, School } from 'lucide-react';
 import { handleRegisterAndBorrow, handleBorrow, handleLogin } from "../../app/biblioteca/[slug]/actions";
 import { User as UserType } from "@/types/lbrary";
 import { motion } from "framer-motion";
@@ -90,7 +90,6 @@ export default function BorrowModal({ isOpen, onClose, bookId, libraryId, slug, 
         transition={{ duration: 0.2 }}
         className="bg-white dark:bg-gray-900 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden"
       >
-        {/* Glass morphism header */}
         <div className="relative h-24 bg-gradient-to-r from-violet-500 to-indigo-600 overflow-hidden">
           <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
           <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-white/20 rounded-full"></div>
@@ -215,23 +214,61 @@ export default function BorrowModal({ isOpen, onClose, bookId, libraryId, slug, 
                 <input type="hidden" name="slug" value={slug} />
 
                 {isRegistering && (
-                  <div className="space-y-2">
-                    <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Nome completo
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <User className="h-5 w-5 text-gray-400" />
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Nome completo
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <User className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <Input
+                          id="fullName"
+                          name="fullName"
+                          placeholder="Digite seu nome completo"
+                          required
+                          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
+                        />
                       </div>
-                      <Input
-                        id="fullName"
-                        name="fullName"
-                        placeholder="Digite seu nome completo"
-                        required
-                        className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
-                      />
                     </div>
-                  </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Turma
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <School className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <Input
+                          id="class"
+                          name="class"
+                          placeholder="Ex.: A, B, Turma 1"
+                          required
+                          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="grade" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Série/Ano
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <School className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <Input
+                          id="grade"
+                          name="grade"
+                          placeholder="Ex.: 1º ano, 9º ano"
+                          required
+                          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 <div className="space-y-2">

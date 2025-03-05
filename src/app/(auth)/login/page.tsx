@@ -121,7 +121,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </div>
               </div>
             </div>
-t
+
             <SubmitButton />
 
             <div className="tex-center text-sm">

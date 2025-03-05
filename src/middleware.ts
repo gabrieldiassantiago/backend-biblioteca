@@ -9,8 +9,9 @@ export async function middleware(request: NextRequest) {
   const { data: { user }, error } = await supabase.auth.getUser();
   console.log('Usuário:', user, 'Erro:', error);
 
-  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
-  const isPublicRoute = ['/login', '/register'].includes(request.nextUrl.pathname);
+  const pathname = request.nextUrl.pathname;
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isPublicRoute = ['/login', '/register'].includes(pathname);
 
   // Se for uma rota admin e o usuário não estiver autenticado, redireciona para login
   if (isAdminRoute && (error || !user)) {
@@ -37,10 +38,15 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Se tudo estiver ok, prossegue com a requisição
+  // Prossegue com a requisição se tudo estiver ok
   return NextResponse.next();
 }
 
+// Configuração do matcher para rodar apenas nas rotas desejadas (isso e mto importante pra nao causar loop)
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|admin/auth/login).*)'],
+  matcher: [
+    '/login',        
+    '/register',       
+    '/admin/:path*',   
+  ],
 };
