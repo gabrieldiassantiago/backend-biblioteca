@@ -8,12 +8,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { DeleteBookButton } from "./delete-book-button"
 import type { Book } from "../../app/(admin)/admin/books/types/BookFormData"
 import { EditBookButton } from "./edit-book.button"
+import Link from "next/link"
 
 async function getUserLibraryId() {
-  
   const supabase = await createClient()
   
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -79,9 +80,9 @@ export async function BookList({
               <TableCell>{book.isbn}</TableCell>
               <TableCell className="text-center">{book.stock}</TableCell>
               <TableCell className="text-center">
-              <Badge variant={book.available > 0 ? "default" : "secondary"}>
-             {book.available}
-            </Badge>
+                <Badge variant={book.available > 0 ? "default" : "secondary"}>
+                  {book.available}
+                </Badge>
               </TableCell>
               <TableCell className="text-right space-x-2">
                 <EditBookButton book={book} />
@@ -100,9 +101,31 @@ export async function BookList({
       </Table>
       
       {totalPages > 1 && (
-        <div className="flex items-center justify-end space-x-2 py-4 px-4 border-t">
+        <div className="flex items-center justify-between space-x-2 py-4 px-4 border-t">
           <div className="text-sm text-muted-foreground">
             Página {page} de {totalPages}
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              disabled={page <= 1}
+            >
+              <Link href={`/admin/books?page=${page > 1 ? page - 1 : 1}`}>
+                Anterior
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              disabled={page >= totalPages}
+            >
+              <Link href={`/admin/books?page=${page < totalPages ? page + 1 : totalPages}`}>
+                Próxima
+              </Link>
+            </Button>
           </div>
         </div>
       )}

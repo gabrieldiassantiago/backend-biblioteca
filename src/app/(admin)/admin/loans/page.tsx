@@ -8,8 +8,16 @@ import { MoreHorizontal } from "lucide-react";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UpdateLoanForm } from "@/components/loans/update-loan-form";
 import { NewLoanModal } from "./new-loan-form";
+import { redirect } from "next/navigation";
 
 // Função para obter o library_id do admin autenticado
 async function getUserLibraryId() {
@@ -27,7 +35,7 @@ async function getUserLibraryId() {
   return userData.library_id;
 }
 
-// Interfaces
+// Interfaces atualizadas
 interface Book { title: string }
 interface User { full_name: string }
 interface RawLoan {
@@ -38,7 +46,7 @@ interface RawLoan {
   borrowed_at: string;
   due_date: string;
   returned_at: string | null;
-  status: "active" | "returned" | "overdue";
+  status: "pending" | "active" | "returned" | "overdue" | "rejected";
   books: Book;
   users: User;
 }
@@ -50,7 +58,7 @@ interface Loan {
   borrowed_at: string;
   due_date: string;
   returned_at: string | null;
-  status: "active" | "returned" | "overdue";
+  status: "pending" | "active" | "returned" | "overdue" | "rejected";
   book_title: string;
   user_name: string;
 }
@@ -88,29 +96,53 @@ function LoanListSkeleton() {
 }
 
 // Componente Principal
-export default async function LoansPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function LoansPage({ searchParams }: { searchParams: Promise<{ page?: string; status?: string }> }) {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
   const paramsObj = await searchParams;
   const page = Number.parseInt(paramsObj.page || "1", 10);
   const pageSize = 10;
   const offset = (page - 1) * pageSize;
+  const statusFilter = paramsObj.status || "all"; // "all" como padrão
 
-  const { count } = await supabase
+  console.log("Parâmetros recebidos:", { page, statusFilter }); // Log para depuração
+
+  // Contagem de empréstimos com filtro de status
+  let countQuery = supabase
     .from("loans")
     .select("*", { count: "exact", head: true })
     .eq("library_id", libraryId);
 
-  const { data: loans, error } = await supabase
+  if (statusFilter !== "all") {
+    countQuery = countQuery.eq("status", statusFilter);
+  }
+
+  const { count } = await countQuery;
+  console.log("Total de empréstimos encontrados:", count); // Log para depuração
+
+  // Busca de empréstimos com filtro de status
+  let loansQuery = supabase
     .from("loans")
     .select("id, user_id, book_id, library_id, borrowed_at, due_date, returned_at, status, books (title), users (full_name)")
-    .eq("library_id", libraryId)
+    .eq("library_id", libraryId);
+
+  if (statusFilter !== "all") {
+    loansQuery = loansQuery.eq("status", statusFilter);
+  }
+
+  const { data: loans, error } = await loansQuery
     .range(offset, offset + pageSize - 1)
     .order("borrowed_at", { ascending: false })
     .returns<RawLoan[]>();
 
-  if (error) throw new Error("Erro ao carregar histórico de empréstimos");
+  if (error) {
+    console.error("Erro ao buscar empréstimos:", error.message); // Log de erro
+    throw new Error("Erro ao carregar histórico de empréstimos: " + error.message);
+  }
 
+  console.log("Empréstimos retornados:", loans?.length); // Log para depuração
+
+  // Formatação dos empréstimos
   const formattedLoans: Loan[] = (loans || []).map((loan) => ({
     id: loan.id,
     user_id: loan.user_id,
@@ -126,11 +158,41 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
 
   const totalPages = Math.ceil((count || 0) / pageSize);
 
+  // Função para atualizar o filtro de status via formulário
+  async function handleStatusFilter(formData: FormData) {
+    "use server";
+    const status = formData.get("status") as string;
+    const newParams = new URLSearchParams({ page: "1" });
+    if (status && status !== "all") {
+      newParams.set("status", status);
+    }
+    console.log("Redirecionando com novos parâmetros:", newParams.toString()); // Log para depuração
+    redirect(`/admin/loans?${newParams.toString()}`);
+  }
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Histórico de Empréstimos</h1>
-        <NewLoanModal /> {/* Botão e formulário de novo empréstimo */}
+        <div className="flex items-center gap-4">
+          <form action={handleStatusFilter} className="flex items-center gap-2">
+            <Select name="status" defaultValue={statusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="returned">Devolvido</SelectItem>
+                <SelectItem value="overdue">Atrasado</SelectItem>
+                <SelectItem value="rejected">Rejeitado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit" variant="outline">Filtrar</Button>
+          </form>
+          <NewLoanModal />
+        </div>
       </div>
       <Suspense fallback={<LoanListSkeleton />}>
         <div className="rounded-md border">
@@ -154,8 +216,18 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
                     <TableCell>{new Date(loan.borrowed_at).toLocaleDateString()}</TableCell>
                     <TableCell>{loan.returned_at ? new Date(loan.returned_at).toLocaleDateString() : new Date(loan.due_date).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Badge variant={loan.status === "active" ? "default" : loan.status === "returned" ? "secondary" : "destructive"}>
-                        {loan.status === "active" ? "Ativo" : loan.status === "returned" ? "Devolvido" : "Atrasado"}
+                      <Badge variant={
+                        loan.status === "pending" ? "outline" :
+                        loan.status === "active" ? "default" :
+                        loan.status === "returned" ? "secondary" :
+                        loan.status === "rejected" ? "destructive" :
+                        "destructive" // overdue
+                      }>
+                        {loan.status === "pending" ? "Pendente" :
+                         loan.status === "active" ? "Ativo" :
+                         loan.status === "returned" ? "Devolvido" :
+                         loan.status === "rejected" ? "Rejeitado" :
+                         "Atrasado"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -166,7 +238,7 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <UpdateLoanForm loanId={loan.id} currentDueDate={loan.due_date} />
+                          <UpdateLoanForm loanId={loan.id} currentStatus={loan.status} currentDueDate={loan.due_date} />
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

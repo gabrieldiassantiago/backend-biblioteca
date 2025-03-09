@@ -1,55 +1,53 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from "react";
 
 interface RecentLoan {
-  id: string
-  book: string
-  user: string
-  date: string
-  dueDate: string
-  status: string
+  id: string;
+  book: string;
+  user: string;
+  date: string;
+  dueDate: string;
+  status: string;
 }
 
-export function RecentLoansTable({
-  loans,
-  loading,
-}: {
-  loans: RecentLoan[]
-  loading: boolean
-}) {
-  const [isMobile, setIsMobile] = useState(false)
+export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; loading: boolean }) {
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768) // Define o breakpoint em 768px (md)
-    }
+      setIsMobile(window.innerWidth < 768); // Breakpoint em 768px (md)
+    };
 
-    handleResize() // Verifica o tamanho inicial da tela
-    window.addEventListener("resize", handleResize) // Adiciona listener de redimensionamento
-    return () => window.removeEventListener("resize", handleResize) // Limpa o listener ao desmontar
-  }, [])
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR")
-  }
+    return new Date(dateString).toLocaleDateString("pt-BR");
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500">Ativo</Badge>
+        return <Badge className="bg-green-500">Ativo</Badge>;
       case "returned":
-        return <Badge className="bg-blue-500">Devolvido</Badge>
+        return <Badge className="bg-blue-500">Devolvido</Badge>;
       case "overdue":
-        return <Badge className="bg-red-500">Atrasado</Badge>
+        return <Badge className="bg-red-500">Atrasado</Badge>;
+      case "pending":
+        return <Badge className="bg-yellow-500">Pendente</Badge>;
+      case "rejected":
+        return <Badge className="bg-gray-500">Rejeitado</Badge>;
       default:
-        return <Badge>Desconhecido</Badge>
+        return <Badge>Desconhecido</Badge>;
     }
-  }
+  };
 
   const renderMobileView = () => {
     if (loading) {
@@ -69,7 +67,7 @@ export function RecentLoansTable({
             </Card>
           ))}
         </div>
-      )
+      );
     }
 
     return (
@@ -90,8 +88,8 @@ export function RecentLoansTable({
           </Card>
         ))}
       </div>
-    )
-  }
+    );
+  };
 
   const renderDesktopView = () => {
     if (loading) {
@@ -107,7 +105,7 @@ export function RecentLoansTable({
             </div>
           ))}
         </div>
-      )
+      );
     }
 
     return (
@@ -135,8 +133,8 @@ export function RecentLoansTable({
           </TableBody>
         </Table>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <Card className="w-full h-max">
@@ -148,6 +146,5 @@ export function RecentLoansTable({
         {isMobile ? renderMobileView() : renderDesktopView()}
       </CardContent>
     </Card>
-  )
+  );
 }
-

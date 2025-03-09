@@ -24,9 +24,9 @@ export async function searchBooks(query: string) {
   try {
     const supabase = await createClient();
     const libraryId = await getUserLibraryId();
-    
+
     if (!query || query.trim().length < 2) return [];
-    
+
     const { data, error } = await supabase
       .from("books")
       .select("id, title, author, available, stock")
@@ -34,7 +34,7 @@ export async function searchBooks(query: string) {
       .ilike("title", `%${query}%`)
       .order("title")
       .limit(10);
-      
+
     if (error) throw new Error("Erro ao buscar livros: " + error.message);
     return data || [];
   } catch (error) {
@@ -48,9 +48,9 @@ export async function searchUsers(query: string) {
   try {
     const supabase = await createClient();
     const libraryId = await getUserLibraryId();
-    
+
     if (!query || query.trim().length < 2) return [];
-    
+
     const { data, error } = await supabase
       .from("users")
       .select("id, full_name, email, role")
@@ -59,7 +59,7 @@ export async function searchUsers(query: string) {
       .ilike("full_name", `%${query}%`)
       .order("full_name")
       .limit(10);
-      
+
     if (error) throw new Error("Erro ao buscar usuários: " + error.message);
     return data || [];
   } catch (error) {
@@ -79,21 +79,21 @@ export async function createNewLoan(bookId: string, userId: string) {
     .select("available, stock")
     .eq("id", bookId)
     .single();
-    
+
   if (bookError || !book) throw new Error("Livro não encontrado");
   if (book.available <= 0 || book.stock <= 0) throw new Error("Livro não está disponível para empréstimo");
 
-  // Verificar se o aluno já tem um empréstimo ativo
+  // Verificar se o aluno já tem empréstimos pendentes ou ativos em excesso
   const { data: activeLoans, error: loansError } = await supabase
     .from("loans")
     .select("id")
     .eq("user_id", userId)
-    .eq("status", "active");
-    
-  if (loansError) throw new Error("Erro ao verificar empréstimos ativos");
-  if (activeLoans?.length >= 3) throw new Error("Usuário já atingiu o limite de empréstimos ativos");
+    .in("status", ["pending", "active"]);
 
-  // Criar o empréstimo
+  if (loansError) throw new Error("Erro ao verificar empréstimos ativos: " + loansError.message);
+  if (activeLoans?.length >= 3) throw new Error("Usuário já atingiu o limite de empréstimos pendentes ou ativos");
+
+  // Criar o empréstimo com status "pending"
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 14); // Prazo de 14 dias
 
@@ -105,93 +105,116 @@ export async function createNewLoan(bookId: string, userId: string) {
       library_id: libraryId,
       borrowed_at: new Date().toISOString(),
       due_date: dueDate.toISOString(),
-      status: "active",
+      status: "active", // Novo empréstimo começa como "pending"
     });
-    
+
   if (insertError) throw new Error("Erro ao criar empréstimo: " + insertError.message);
 
-  // Atualizar disponibilidade do livro
-  const { error: updateError } = await supabase
-    .from("books")
-    .update({ 
-      available: book.available - 1,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", bookId);
-    
-  if (updateError) throw new Error("Erro ao atualizar disponibilidade do livro");
-
   revalidatePath("/admin/loans");
-  return { success: true };
+  return { success: true, message: "Empréstimo criado com status 'pendente'. Aguarde aprovação." };
 }
 
-// Funções existentes mantidas
-export async function updateLoanStatus(loanId: string, newStatus: "active" | "returned" | "overdue") {
+// Atualizar o status de um empréstimo
+export async function updateLoanStatus(loanId: string, newStatus: "pending" | "active" | "returned" | "overdue" | "rejected") {
+  console.log("Iniciando updateLoanStatus", { loanId, newStatus });
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
 
+  // Verificar se o empréstimo existe e pertence à biblioteca
   const { data: loan, error: fetchError } = await supabase
     .from("loans")
     .select("library_id, status, book_id")
     .eq("id", loanId)
     .single();
-    
-  if (fetchError || !loan) throw new Error("Empréstimo não encontrado");
+
+  if (fetchError || !loan) throw new Error("Empréstimo não encontrado: " + (fetchError?.message || "Desconhecido"));
   if (loan.library_id !== libraryId) throw new Error("Você não tem permissão para atualizar este empréstimo");
   if (loan.status === newStatus) throw new Error(`Este empréstimo já está como "${newStatus}"`);
 
+  // Preparar os dados de atualização
   const updateData: { status: string; returned_at?: string | null; updated_at: string } = {
     status: newStatus,
     updated_at: new Date().toISOString(),
   };
-  
+
+  // Ajustar a data de devolução se for "returned"
   if (newStatus === "returned") {
     updateData.returned_at = new Date().toISOString();
-    
-    // Se o livro foi devolvido, atualizar a disponibilidade
+  } else {
+    updateData.returned_at = null;
+  }
+
+  // Atualizar o status do empréstimo
+  const { error: updateError } = await supabase
+    .from("loans")
+    .update(updateData)
+    .eq("id", loanId);
+
+  if (updateError) {
+    console.error("Erro ao atualizar status:", updateError.message, updateError.details);
+    throw new Error("Erro ao atualizar status do empréstimo: " + (updateError.message || "Detalhes indisponíveis"));
+  }
+
+  // Ajustar a disponibilidade do livro conforme o status
+  if (newStatus === "active" && loan.status === "pending") {
+    // Aprovar empréstimo: reduzir estoque disponível
+    const { data: book, error: bookError } = await supabase
+      .from("books")
+      .select("available")
+      .eq("id", loan.book_id)
+      .single();
+
+    if (bookError || !book) throw new Error("Livro não encontrado: " + (bookError?.message || "Desconhecido"));
+    if (book.available <= 0) throw new Error("Livro não está mais disponível");
+
+    const { error: stockError } = await supabase
+      .from("books")
+      .update({ available: book.available - 1, updated_at: new Date().toISOString() })
+      .eq("id", loan.book_id);
+
+    if (stockError) throw new Error("Erro ao atualizar estoque do livro: " + stockError.message);
+  } else if (newStatus === "returned" && (loan.status === "active" || loan.status === "overdue")) {
+    // Devolver livro: aumentar estoque disponível
     const { data: book, error: bookError } = await supabase
       .from("books")
       .select("available, stock")
       .eq("id", loan.book_id)
       .single();
-      
-    if (!bookError && book) {
-      await supabase
-        .from("books")
-        .update({ 
-          available: book.available + 1,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", loan.book_id);
-    }
-  } else {
-    updateData.returned_at = null;
+
+    if (bookError || !book) throw new Error("Livro não encontrado: " + (bookError?.message || "Desconhecido"));
+
+    const { error: stockError } = await supabase
+      .from("books")
+      .update({ available: Math.min(book.available + 1, book.stock), updated_at: new Date().toISOString() })
+      .eq("id", loan.book_id);
+
+    if (stockError) throw new Error("Erro ao atualizar estoque do livro: " + stockError.message);
+  } else if (newStatus === "rejected" && loan.status === "pending") {
+    // Não é necessário ajustar o estoque, pois o livro não foi reservado ainda
+    console.log("Empréstimo rejeitado, sem alterações no estoque.");
   }
 
-  const { error: updateError } = await supabase
-    .from("loans")
-    .update(updateData)
-    .eq("id", loanId);
-    
-  if (updateError) throw new Error("Erro ao atualizar status do empréstimo");
-
   revalidatePath("/admin/loans");
+  return { success: true, message: `Status atualizado para "${newStatus}" com sucesso!` };
 }
 
+// Estender o prazo de devolução de um empréstimo
 export async function extendLoanDueDate(loanId: string, formData: FormData) {
+  console.log("Iniciando extendLoanDueDate", { loanId });
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
   const newDueDate = formData.get("dueDate") as string;
-  
+
   if (!newDueDate) throw new Error("Data de devolução não fornecida");
 
+  // Verificar se o empréstimo existe e pertence à biblioteca
   const { data: loan, error: fetchError } = await supabase
     .from("loans")
     .select("library_id, due_date, status")
     .eq("id", loanId)
     .single();
-    
-  if (fetchError || !loan) throw new Error("Empréstimo não encontrado");
+
+  if (fetchError || !loan) throw new Error("Empréstimo não encontrado: " + (fetchError?.message || "Desconhecido"));
   if (loan.library_id !== libraryId) throw new Error("Você não tem permissão para atualizar este empréstimo");
 
   const currentDueDate = new Date(loan.due_date).toISOString().split("T")[0];
@@ -201,8 +224,11 @@ export async function extendLoanDueDate(loanId: string, formData: FormData) {
   today.setHours(0, 0, 0, 0);
   const dueDate = new Date(newDueDate);
   let newStatus = loan.status;
-  
-  if (dueDate > today && loan.status === "overdue") newStatus = "active";
+
+  //se 
+  if (dueDate > today && loan.status === "overdue") {
+    newStatus = "active";
+  }
 
   const { error: updateError } = await supabase
     .from("loans")
@@ -212,8 +238,12 @@ export async function extendLoanDueDate(loanId: string, formData: FormData) {
       updated_at: new Date().toISOString() 
     })
     .eq("id", loanId);
-    
-  if (updateError) throw new Error("Falha ao estender o prazo do empréstimo");
+
+  if (updateError) {
+    console.error("Erro ao estender prazo:", updateError.message, updateError.details);
+    throw new Error("Falha ao estender o prazo do empréstimo: " + (updateError.message || "Detalhes indisponíveis"));
+  }
 
   revalidatePath("/admin/loans");
+  return { success: true, message: "Prazo estendido com sucesso!" };
 }

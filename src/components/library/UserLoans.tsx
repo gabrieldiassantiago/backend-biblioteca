@@ -13,13 +13,13 @@ interface Book {
   author: string;
 }
 
-// Interface para o empréstimo
+// Interface para o empréstimo (atualizada com novos status)
 interface Loan {
   id: string;
   book: Book;
   borrowed_at: string;
   due_date: string;
-  status: "active" | "returned" | "overdue";
+  status: "pending" | "active" | "returned" | "overdue" | "rejected"; // Adicionado "pending" e "rejected"
 }
 
 interface UserLoansProps {
@@ -52,11 +52,17 @@ export default function UserLoans({ userId, onClose }: UserLoansProps) {
     loadLoans();
   }, [userId]);
 
-  // Função para determinar o status do empréstimo
-  const getLoanStatus = (loan: Loan): "active" | "returned" | "overdue" | "due-soon" => {
+  // Função para determinar o status do empréstimo (atualizada para novos status)
+  const getLoanStatus = (loan: Loan): "pending" | "active" | "returned" | "overdue" | "rejected" | "due-soon" => {
     const dueDate = new Date(loan.due_date);
     const today = new Date();
+
+    // Priorizar status explícitos
+    if (loan.status === "pending") return "pending";
+    if (loan.status === "rejected") return "rejected";
+    if (loan.status === "returned") return "returned";
     
+    // Lógica para status "active" e derivados
     if (loan.status !== "active") return "returned";
     if (dueDate < today) return "overdue";
     
@@ -158,16 +164,30 @@ export default function UserLoans({ userId, onClose }: UserLoansProps) {
                           </div>
                           
                           <Badge className={`mt-1 ${
+                            status === 'pending' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                            status === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                             status === 'returned' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                             status === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                             status === 'due-soon' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-                            'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                            'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' // active
                           }`}>
-                            {status === 'returned' ? 'Devolvido' :
+                            {status === 'pending' ? 'Pendente' :
+                             status === 'rejected' ? 'Rejeitado' :
+                             status === 'returned' ? 'Devolvido' :
                              status === 'overdue' ? 'Atrasado' :
                              status === 'due-soon' ? 'Vence em breve' :
                              'Ativo'}
                           </Badge>
+                          {status === 'pending' && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              Este empréstimo ainda está aguardando aprovação pela biblioteca.
+                            </p>
+                          )}
+                          {status === 'rejected' && (
+                            <p className="text-xs text-red-500 dark:text-red-400 mt-2">
+                              Este empréstimo foi rejeitado pela biblioteca.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </motion.li>

@@ -15,9 +15,12 @@ export default async function LibraryPage({
 }) {
   const paramsObj = await params;
   const library = await getLibraryBySlug(paramsObj.slug);
+
   if (!library) {
     notFound();
   }
+
+  
 
   const searchParamsObj = await searchParams;
   const searchQuery = searchParamsObj.search || "";

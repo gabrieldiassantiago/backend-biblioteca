@@ -5,9 +5,33 @@ export async function middleware(request: NextRequest) {
   console.log('Middleware executado para:', request.nextUrl.pathname);
   const supabase = await createClient();
 
-  // Verifica o usuário autenticado
-  const { data: { user }, error } = await supabase.auth.getUser();
-  console.log('Usuário:', user, 'Erro:', error);
+  // Verificar cookie de autenticação
+  const authToken = request.cookies.get('supabase-auth-token')?.value;
+  let user = null;
+  let error = null;
+
+  if (authToken) {
+    try {
+      const { data, error: authError } = await supabase.auth.getUser(authToken);
+      if (!authError && data.user) {
+        user = data.user;
+        console.log('[Middleware Cache] Usuário obtido do cookie:', user.id);
+      } else {
+        error = authError;
+      }
+    } catch (err) {
+      console.error('[Middleware Cache] Erro ao validar token:', err);
+      error = err;
+    }
+  }
+
+  // Se não houver usuário no cache, autenticar
+  if (!user && !error) {
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    user = authUser;
+    error = authError;
+    console.log('Usuário autenticado via Supabase:', user?.id, 'Erro:', error);
+  }
 
   const pathname = request.nextUrl.pathname;
   const isAdminRoute = pathname.startsWith('/admin');
@@ -42,11 +66,11 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Configuração do matcher para rodar apenas nas rotas desejadas (isso e mto importante pra nao causar loop)
+// Configuração do matcher para rodar apenas nas rotas desejadas, excluindo assets
 export const config = {
   matcher: [
-    '/login',        
-    '/register',       
-    '/admin/:path*',   
+    '/login',
+    '/register',
+    '/admin/((?!api|_next/static|_next/image|favicon.ico).*)', // Exclui APIs, assets estáticos e favicon
   ],
 };

@@ -113,12 +113,7 @@ export default function AdminDashboardPage() {
           icon: BookOpen,
           trend: `${data.stats.loansTrend > 0 ? "+" : ""}${data.stats.loansTrend}%`,
         },
-        {
-          title: "Visitas Mensais",
-          value: data.stats.monthlyVisits.toString(),
-          icon: TrendingUp,
-          trend: `${data.stats.visitsTrend > 0 ? "+" : ""}${data.stats.visitsTrend}%`,
-        },
+       
       ])
       setMonthlyLoans(data.monthlyLoans)
       setLoanStatus(data.loanStatus)
@@ -144,6 +139,7 @@ export default function AdminDashboardPage() {
         {stats.map((stat, index) => (
           <StatCard key={index} stat={stat} loading={loading} />
         ))}
+        
       </div>
 
       {/* Gráficos */}

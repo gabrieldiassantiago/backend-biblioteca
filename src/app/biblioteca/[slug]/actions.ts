@@ -9,7 +9,7 @@ interface Book {
   id: string;
   title: string;
   author: string;
-  available: number; // Ajustado para number conforme seu código
+  available: number;
   stock: number;
 }
 
@@ -19,7 +19,7 @@ interface Loan {
   book: Book;
   borrowed_at: string;
   due_date: string;
-  status: "active" | "returned" | "overdue"; //active é emprestado, returned é devolvido, overdue é atrasado
+  status: "active" | "returned" | "overdue" | "pending";
 }
 
 // Interface para os dados brutos retornados do Supabase em fetchUserLoans
@@ -27,15 +27,15 @@ interface RawLoan {
   id: string;
   borrowed_at: string;
   due_date: string;
-  status: "active" | "returned" | "overdue";
+  status: "active" | "returned" | "overdue" | "pending";  // ativo, devolvido, atrasado, pendente
   books: {
     title: string;
     author: string;
-  } | null; // Pode ser null se o join falhar
+  } | null;
 }
 
+// Função para registrar um usuário e solicitar um empréstimo
 export async function handleRegisterAndBorrow(formData: FormData) {
-  console.log("Iniciando handleRegisterAndBorrow");
   const supabase = await createClient();
   const bookId = formData.get("bookId") as string;
   const libraryId = formData.get("libraryId") as string;
@@ -44,11 +44,11 @@ export async function handleRegisterAndBorrow(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const classe = formData.get("class") as string;
-  const grade = formData.get("grade") as string;     // captura os dados do formulário
-
+  const grade = formData.get("grade") as string;
 
   console.log("Dados recebidos:", { bookId, libraryId, slug, fullName, email });
 
+  // Criar o usuário no Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -63,6 +63,7 @@ export async function handleRegisterAndBorrow(formData: FormData) {
   const userId = authData.user.id;
   console.log("Usuário criado com ID:", userId);
 
+  // Inserir o usuário na tabela "users"
   const { error: userInsertError } = await supabase
     .from("users")
     .insert({
@@ -81,14 +82,30 @@ export async function handleRegisterAndBorrow(formData: FormData) {
   }
   console.log("Usuário inserido na tabela users");
 
-  //esse if serve pra poder evitar problema no registro, pois aqui ele vai considerar que o usuario pode já existir ou não, ou seja, ele ainda precisa criar uma conta
+  // Se não houver bookId, apenas retorna sucesso no registro
   if (!bookId || bookId === "") {
     return { success: true, message: "Conta criada com sucesso!" };
   }
 
-  //se ele passar por este if, ele vai tentar registrar o emprestimo + criar uma nova conta, isso depende das condições
+  // Verificar se o usuário já tem um empréstimo "active"
+  const { data: activeLoan, error: activeLoanError } = await supabase
+    .from("loans")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .limit(1);
 
+  if (activeLoanError) {
+    console.error("Erro ao verificar empréstimos ativos:", activeLoanError.message);
+    throw new Error("Erro ao verificar empréstimos ativos: " + activeLoanError.message);
+  }
 
+  if (activeLoan && activeLoan.length > 0) {
+    console.error("Usuário já tem um empréstimo ativo:", activeLoan);
+    throw new Error("Você já tem um empréstimo ativo. Devolva o livro atual antes de solicitar outro.");
+  }
+
+  // Verificar disponibilidade do livro
   const { data: book, error: bookError } = await supabase
     .from("books")
     .select("available, stock")
@@ -104,6 +121,7 @@ export async function handleRegisterAndBorrow(formData: FormData) {
     throw new Error("Este livro não está disponível para empréstimo.");
   }
 
+  // Criar o empréstimo como "pending" ou seja, a biblioteca ainda não confirmou o empréstimo, ela precisa aceitar o empréstimo
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 7);
   const loanData = {
@@ -112,7 +130,7 @@ export async function handleRegisterAndBorrow(formData: FormData) {
     library_id: libraryId,
     borrowed_at: new Date().toISOString(),
     due_date: dueDate.toISOString(),
-    status: "active",
+    status: "pending",
   };
   console.log("Dados do empréstimo a serem inseridos:", loanData);
 
@@ -127,6 +145,7 @@ export async function handleRegisterAndBorrow(formData: FormData) {
   return { success: true, message: "Empréstimo realizado com sucesso!" };
 }
 
+// Função para solicitar um empréstimo (usuário já autenticado)
 export async function handleBorrow(formData: FormData) {
   console.log("Iniciando handleBorrow");
   const supabase = await createClient();
@@ -137,6 +156,25 @@ export async function handleBorrow(formData: FormData) {
 
   console.log("Dados para empréstimo:", { bookId, libraryId, slug, userId });
 
+  // Verificar se o usuário já tem um empréstimo "active"
+  const { data: activeLoan, error: activeLoanError } = await supabase
+    .from("loans")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .limit(1);
+
+  if (activeLoanError) {
+    console.error("Erro ao verificar empréstimos ativos:", activeLoanError.message);
+    throw new Error("Erro ao verificar empréstimos ativos: " + activeLoanError.message);
+  }
+
+  if (activeLoan && activeLoan.length > 0) {
+    console.error("Usuário já tem um empréstimo ativo:", activeLoan);
+    throw new Error("Você já tem um empréstimo ativo. Devolva o livro atual antes de solicitar outro.");
+  }
+
+  // Verificar disponibilidade do livro
   const { data: book, error: bookError } = await supabase
     .from("books")
     .select("available, stock")
@@ -152,6 +190,7 @@ export async function handleBorrow(formData: FormData) {
     throw new Error("Este livro não está disponível para empréstimo.");
   }
 
+  // Criar o empréstimo como "pending"
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 7);
   const loanData = {
@@ -160,7 +199,7 @@ export async function handleBorrow(formData: FormData) {
     library_id: libraryId,
     borrowed_at: new Date().toISOString(),
     due_date: dueDate.toISOString(),
-    status: "active",
+    status: "pending",
   };
   console.log("Dados do empréstimo a serem inseridos:", loanData);
 
@@ -175,6 +214,7 @@ export async function handleBorrow(formData: FormData) {
   return { success: true, message: "Empréstimo realizado com sucesso!" };
 }
 
+// Função para logout
 export async function handleLogout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
@@ -182,6 +222,7 @@ export async function handleLogout() {
   redirect("/");
 }
 
+// Função para buscar empréstimos de um usuário
 export async function fetchUserLoans(userId: string): Promise<Loan[]> {
   const supabase = await createClient();
 
@@ -208,15 +249,14 @@ export async function fetchUserLoans(userId: string): Promise<Loan[]> {
     throw new Error("Erro ao buscar empréstimos: " + error.message);
   }
 
-  // Normalizar os dados para corresponder à interface Loan
   const normalizedLoans: Loan[] = (data || []).map((loan: RawLoan) => ({
     id: loan.id,
     book: {
       id: "", // Não estamos selecionando o book_id
       title: loan.books?.title || "Título não encontrado",
       author: loan.books?.author || "Autor não encontrado",
-      available: 0, // Livro emprestado, não disponível
-      stock: 0, // Não temos essa info aqui, ajuste se precisar
+      available: 0,
+      stock: 0,
     },
     borrowed_at: loan.borrowed_at,
     due_date: loan.due_date,
@@ -226,6 +266,7 @@ export async function fetchUserLoans(userId: string): Promise<Loan[]> {
   return normalizedLoans;
 }
 
+// Função para login
 export async function handleLogin(formData: FormData) {
   console.log("Iniciando handleLogin");
   const supabase = await createClient();
@@ -248,6 +289,7 @@ export async function handleLogin(formData: FormData) {
   return { success: true, message: "Login realizado com sucesso!" };
 }
 
+// Função para buscar biblioteca por slug
 export async function getLibraryBySlug(slug: string) {
   const supabase = await createClient();
   const { data: library, error } = await supabase
@@ -263,6 +305,7 @@ export async function getLibraryBySlug(slug: string) {
   return library;
 }
 
+// Função para buscar livros por biblioteca
 export async function getBooksByLibraryId(libraryId: string, searchQuery: string, page: number, limit: number) {
   const supabase = await createClient();
   let query = supabase.from("books").select("*", { count: "exact" }).eq("library_id", libraryId);
@@ -281,6 +324,7 @@ export async function getBooksByLibraryId(libraryId: string, searchQuery: string
   return { books, count };
 }
 
+// Função para obter sessão do usuário
 export async function getUserSession() {
   const supabase = await createClient();
   const {

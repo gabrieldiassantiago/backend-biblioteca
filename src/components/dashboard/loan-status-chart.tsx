@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useEffect, useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useState } from "react";
 
 interface LoanStatusData {
-  name: string
-  value: number
-  color: string
+  name: string;
+  value: number;
+  color: string;
 }
 
 export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loading: boolean }) {
@@ -16,24 +16,41 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
     innerRadius: 60,
     outerRadius: 90,
     fontSize: 12,
-  })
+  });
 
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth
+      const width = window.innerWidth;
       if (width < 400) {
-        setChartSize({ innerRadius: 40, outerRadius: 60, fontSize: 10 })
+        setChartSize({ innerRadius: 40, outerRadius: 60, fontSize: 10 });
       } else if (width < 768) {
-        setChartSize({ innerRadius: 50, outerRadius: 75, fontSize: 11 })
+        setChartSize({ innerRadius: 50, outerRadius: 75, fontSize: 11 });
       } else {
-        setChartSize({ innerRadius: 60, outerRadius: 90, fontSize: 12 })
+        setChartSize({ innerRadius: 60, outerRadius: 90, fontSize: 12 });
       }
-    }
+    };
 
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Traduzir os nomes para português no gráfico
+  const translatedData = data.map((entry) => ({
+    ...entry,
+    name:
+      entry.name === "Ativos"
+        ? "Ativos"
+        : entry.name === "Devolvidos"
+        ? "Devolvidos"
+        : entry.name === "Atrasados"
+        ? "Atrasados"
+        : entry.name === "Pendentes"
+        ? "Pendentes"
+        : entry.name === "Rejeitados"
+        ? "Rejeitados"
+        : entry.name, 
+  }));
 
   return (
     <Card className="w-full">
@@ -46,21 +63,25 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
           <div className="flex h-full w-full items-center justify-center">
             <Skeleton className="h-32 w-32 rounded-full" />
           </div>
+        ) : data.length === 0 ? (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            Nenhum dado disponível
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={translatedData}
                 cx="50%"
                 cy="50%"
                 innerRadius={chartSize.innerRadius}
                 outerRadius={chartSize.outerRadius}
                 paddingAngle={2}
                 dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => (percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : "")} 
                 labelLine={false}
               >
-                {data.map((entry, index) => (
+                {translatedData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -72,13 +93,18 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
                   boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
                   fontSize: `${chartSize.fontSize}px`,
                 }}
-                formatter={(value: number) => [`${value} empréstimos`, ""]}
+                formatter={(value: number, name: string) => [`${value} empréstimos`, name]}
               />
-              <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: `${chartSize.fontSize}px` }} />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                wrapperStyle={{ fontSize: `${chartSize.fontSize}px` }}
+                formatter={(value) => <span className="text-foreground">{value}</span>}
+              />
             </PieChart>
           </ResponsiveContainer>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
