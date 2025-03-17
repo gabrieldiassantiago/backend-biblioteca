@@ -1,7 +1,9 @@
+// src/app/(admin)/admin/loans/actions.ts
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { sendEmail } from "@/app/lib/email-service";
 
 // Obter o ID da biblioteca do usuário autenticado
 async function getUserLibraryId() {
@@ -93,11 +95,11 @@ export async function createNewLoan(bookId: string, userId: string) {
   if (loansError) throw new Error("Erro ao verificar empréstimos ativos: " + loansError.message);
   if (activeLoans?.length >= 3) throw new Error("Usuário já atingiu o limite de empréstimos pendentes ou ativos");
 
-  // Criar o empréstimo com status "pending"
+  // Criar o empréstimo com status "active"
   const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 14); // Prazo de 14 dias
+  dueDate.setDate(dueDate.getDate() + 7);
 
-  const { error: insertError } = await supabase
+  const { data: newLoan, error: insertError } = await supabase
     .from("loans")
     .insert({
       user_id: userId,
@@ -105,13 +107,23 @@ export async function createNewLoan(bookId: string, userId: string) {
       library_id: libraryId,
       borrowed_at: new Date().toISOString(),
       due_date: dueDate.toISOString(),
-      status: "active", // Novo empréstimo começa como "pending"
-    });
+      status: "active",
+    })
+    .select()
+    .single();
 
   if (insertError) throw new Error("Erro ao criar empréstimo: " + insertError.message);
 
+  // Enviar email de confirmação
+  try {
+    await sendEmail(newLoan.id, 'newLoan');
+    console.log(`Email de confirmação enviado para o empréstimo ${newLoan.id}`);
+  } catch (emailError) {
+    console.error("Erro ao enviar email de confirmação:", emailError);
+  }
+
   revalidatePath("/admin/loans");
-  return { success: true, message: "Empréstimo criado com status 'pendente'. Aguarde aprovação." };
+  return { success: true, message: "Empréstimo criado com sucesso. Uma notificação foi enviada ao usuário." };
 }
 
 // Atualizar o status de um empréstimo
@@ -189,6 +201,14 @@ export async function updateLoanStatus(loanId: string, newStatus: "pending" | "a
       .eq("id", loan.book_id);
 
     if (stockError) throw new Error("Erro ao atualizar estoque do livro: " + stockError.message);
+
+    // Enviar email de devolução
+    try {
+      await sendEmail(loanId, 'returnedLoan');
+      console.log(`Email de devolução enviado para o empréstimo ${loanId}`);
+    } catch (emailError) {
+      console.error("Erro ao enviar email de devolução:", emailError);
+    }
   } else if (newStatus === "rejected" && loan.status === "pending") {
     // Não é necessário ajustar o estoque, pois o livro não foi reservado ainda
     console.log("Empréstimo rejeitado, sem alterações no estoque.");
@@ -225,7 +245,6 @@ export async function extendLoanDueDate(loanId: string, formData: FormData) {
   const dueDate = new Date(newDueDate);
   let newStatus = loan.status;
 
-  //se 
   if (dueDate > today && loan.status === "overdue") {
     newStatus = "active";
   }

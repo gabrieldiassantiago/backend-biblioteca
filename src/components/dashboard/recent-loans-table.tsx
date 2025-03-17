@@ -1,60 +1,61 @@
-"use client";
+"use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useState, useEffect } from "react"
+import { ClipboardList } from 'lucide-react'
 
 interface RecentLoan {
-  id: string;
-  book: string;
-  user: string;
-  date: string;
-  dueDate: string;
-  status: string;
+  id: string
+  book: string
+  user: string
+  date: string
+  dueDate: string
+  status: string
 }
 
 export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; loading: boolean }) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768); // Breakpoint em 768px (md)
-    };
+      setIsMobile(window.innerWidth < 768)
+    }
 
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR");
-  };
+    return new Date(dateString).toLocaleDateString("pt-BR")
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500">Ativo</Badge>;
+        return <Badge className="bg-emerald-500 hover:bg-emerald-600">Ativo</Badge>
       case "returned":
-        return <Badge className="bg-blue-500">Devolvido</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Devolvido</Badge>
       case "overdue":
-        return <Badge className="bg-red-500">Atrasado</Badge>;
+        return <Badge className="bg-rose-500 hover:bg-rose-600">Atrasado</Badge>
       case "pending":
-        return <Badge className="bg-yellow-500">Pendente</Badge>;
+        return <Badge className="bg-amber-500 hover:bg-amber-600">Pendente</Badge>
       case "rejected":
-        return <Badge className="bg-gray-500">Rejeitado</Badge>;
+        return <Badge className="bg-slate-500 hover:bg-slate-600">Rejeitado</Badge>
       default:
-        return <Badge>Desconhecido</Badge>;
+        return <Badge>Desconhecido</Badge>
     }
-  };
+  }
 
   const renderMobileView = () => {
     if (loading) {
       return (
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
-            <Card key={i} className="p-4">
+            <Card key={i} className="p-4 border border-border/50">
               <Skeleton className="h-6 w-3/4 mb-4" />
               <div className="grid grid-cols-2 gap-2">
                 <Skeleton className="h-4 w-full" />
@@ -67,13 +68,13 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
             </Card>
           ))}
         </div>
-      );
+      )
     }
 
     return (
       <div className="space-y-4">
         {loans.map((loan) => (
-          <Card key={loan.id} className="p-4">
+          <Card key={loan.id} className="p-4 border border-border/50 hover:border-primary/20 transition-colors">
             <div className="font-medium text-lg mb-2">{loan.book}</div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="text-muted-foreground">Usuário:</div>
@@ -88,8 +89,8 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
           </Card>
         ))}
       </div>
-    );
-  };
+    )
+  }
 
   const renderDesktopView = () => {
     if (loading) {
@@ -105,24 +106,24 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
             </div>
           ))}
         </div>
-      );
+      )
     }
 
     return (
-      <div className="overflow-x-auto">
+      <div className="rounded-md border border-border/50">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="whitespace-nowrap">Livro</TableHead>
-              <TableHead className="whitespace-nowrap">Usuário</TableHead>
-              <TableHead className="whitespace-nowrap">Data</TableHead>
-              <TableHead className="whitespace-nowrap">Vencimento</TableHead>
-              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <TableHead className="whitespace-nowrap font-medium">Livro</TableHead>
+              <TableHead className="whitespace-nowrap font-medium">Usuário</TableHead>
+              <TableHead className="whitespace-nowrap font-medium">Data</TableHead>
+              <TableHead className="whitespace-nowrap font-medium">Vencimento</TableHead>
+              <TableHead className="whitespace-nowrap font-medium">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loans.map((loan) => (
-              <TableRow key={loan.id}>
+              <TableRow key={loan.id} className="hover:bg-muted/30">
                 <TableCell className="font-medium whitespace-nowrap">{loan.book}</TableCell>
                 <TableCell className="whitespace-nowrap">{loan.user}</TableCell>
                 <TableCell className="whitespace-nowrap">{formatDate(loan.date)}</TableCell>
@@ -133,18 +134,23 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
           </TableBody>
         </Table>
       </div>
-    );
-  };
+    )
+  }
 
   return (
-    <Card className="w-full h-max">
-      <CardHeader>
-        <CardTitle>Empréstimos Recentes</CardTitle>
-        <CardDescription>Os últimos 5 empréstimos registrados no sistema</CardDescription>
+    <Card className="overflow-hidden border-none bg-gradient-to-br from-card to-card/80 shadow-md transition-all hover:shadow-lg">
+      <CardHeader className="flex flex-row items-start justify-between pb-2">
+        <div>
+          <CardTitle className="text-xl font-bold">Empréstimos Recentes</CardTitle>
+          <CardDescription>Os últimos 5 empréstimos registrados no sistema</CardDescription>
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+          <ClipboardList className="h-4 w-4 text-primary" />
+        </div>
       </CardHeader>
       <CardContent className={isMobile ? "" : "overflow-x-auto"}>
         {isMobile ? renderMobileView() : renderDesktopView()}
       </CardContent>
     </Card>
-  );
+  )
 }

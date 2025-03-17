@@ -18,6 +18,7 @@ import {
 import { UpdateLoanForm } from "@/components/loans/update-loan-form";
 import { NewLoanModal } from "./new-loan-form";
 import { redirect } from "next/navigation";
+import { PaginationControls } from "./PaginationControls";
 
 // Função para obter o library_id do admin autenticado
 async function getUserLibraryId() {
@@ -95,17 +96,16 @@ function LoanListSkeleton() {
   );
 }
 
-// Componente Principal
 export default async function LoansPage({ searchParams }: { searchParams: Promise<{ page?: string; status?: string }> }) {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
   const paramsObj = await searchParams;
-  const page = Number.parseInt(paramsObj.page || "1", 10);
+  const page = Math.max(1, Number.parseInt(paramsObj.page || "1", 10));
   const pageSize = 10;
   const offset = (page - 1) * pageSize;
-  const statusFilter = paramsObj.status || "all"; // "all" como padrão
+  const statusFilter = paramsObj.status || "all";
 
-  console.log("Parâmetros recebidos:", { page, statusFilter }); // Log para depuração
+  console.log("Parâmetros recebidos:", { page, statusFilter });
 
   // Contagem de empréstimos com filtro de status
   let countQuery = supabase
@@ -118,7 +118,7 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
   }
 
   const { count } = await countQuery;
-  console.log("Total de empréstimos encontrados:", count); // Log para depuração
+  console.log("Total de empréstimos encontrados:", count);
 
   // Busca de empréstimos com filtro de status
   let loansQuery = supabase
@@ -136,13 +136,12 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
     .returns<RawLoan[]>();
 
   if (error) {
-    console.error("Erro ao buscar empréstimos:", error.message); // Log de erro
+    console.error("Erro ao buscar empréstimos:", error.message);
     throw new Error("Erro ao carregar histórico de empréstimos: " + error.message);
   }
 
-  console.log("Empréstimos retornados:", loans?.length); // Log para depuração
+  console.log("Empréstimos retornados:", loans?.length);
 
-  // Formatação dos empréstimos
   const formattedLoans: Loan[] = (loans || []).map((loan) => ({
     id: loan.id,
     user_id: loan.user_id,
@@ -158,7 +157,6 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
 
   const totalPages = Math.ceil((count || 0) / pageSize);
 
-  // Função para atualizar o filtro de status via formulário
   async function handleStatusFilter(formData: FormData) {
     "use server";
     const status = formData.get("status") as string;
@@ -166,7 +164,7 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
     if (status && status !== "all") {
       newParams.set("status", status);
     }
-    console.log("Redirecionando com novos parâmetros:", newParams.toString()); // Log para depuração
+    console.log("Redirecionando com novos parâmetros:", newParams.toString());
     redirect(`/admin/loans?${newParams.toString()}`);
   }
 
@@ -221,7 +219,7 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
                         loan.status === "active" ? "default" :
                         loan.status === "returned" ? "secondary" :
                         loan.status === "rejected" ? "destructive" :
-                        "destructive" // overdue
+                        "destructive"
                       }>
                         {loan.status === "pending" ? "Pendente" :
                          loan.status === "active" ? "Ativo" :
@@ -251,10 +249,13 @@ export default async function LoansPage({ searchParams }: { searchParams: Promis
               )}
             </TableBody>
           </Table>
-          {totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4 px-4 border-t">
-              <div className="text-sm text-muted-foreground">Página {page} de {totalPages}</div>
-            </div>
+          {totalPages > 0 && (
+            <PaginationControls
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={count || 0}
+              statusFilter={statusFilter}
+            />
           )}
         </div>
       </Suspense>

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Book, Users, BookOpen, TrendingUp } from "lucide-react"
+import { Book, Users, BookOpen, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -58,25 +58,38 @@ const initialStats: DashboardStat[] = [
 
 // Componente para exibir uma estatística individual
 const StatCard: React.FC<{ stat: DashboardStat; loading: boolean }> = ({ stat, loading }) => (
-  <Card>
+  <Card className="overflow-hidden border-none bg-gradient-to-br from-card to-card/80 shadow-md transition-all hover:shadow-lg">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-      <stat.icon className="h-4 w-4 text-muted-foreground" />
+      <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+        <stat.icon className="h-4 w-4 text-primary" />
+      </div>
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold">
-        {loading ? <Skeleton className="h-7 w-16" /> : stat.value}
+      <div className="text-3xl font-bold tracking-tight">
+        {loading ? <Skeleton className="h-8 w-20" /> : stat.value}
       </div>
-      <p className="text-xs text-muted-foreground">
+      <div className="mt-2 flex items-center text-xs">
         {loading ? (
           <Skeleton className="h-4 w-24" />
         ) : (
-          <span className={stat.trend.startsWith("+") ? "text-green-600" : "text-red-600"}>
-            {stat.trend}
-          </span>
-        )}{" "}
-        {!loading && "em relação ao mês passado"}
-      </p>
+          <>
+            {stat.trend.startsWith("+") ? (
+              <ArrowUpRight className="mr-1 h-3 w-3 text-emerald-500" />
+            ) : (
+              <ArrowDownRight className="mr-1 h-3 w-3 text-rose-500" />
+            )}
+            <span
+              className={
+                stat.trend.startsWith("+") ? "text-emerald-500" : "text-rose-500"
+              }
+            >
+              {stat.trend}
+            </span>
+            <span className="ml-1 text-muted-foreground">em relação ao mês passado</span>
+          </>
+        )}
+      </div>
     </CardContent>
   </Card>
 )
@@ -88,6 +101,7 @@ export default function AdminDashboardPage() {
   const [loanStatus, setLoanStatus] = useState<LoanStatusData[]>([])
   const [popularBooks, setPopularBooks] = useState<PopularBook[]>([])
   const [recentLoans, setRecentLoans] = useState<RecentLoan[]>([])
+  const [libraryName, setLibraryName] = useState<string>("...") // Estado para o nome da biblioteca
   const [loading, setLoading] = useState(true)
 
   // Função para buscar dados
@@ -113,14 +127,21 @@ export default function AdminDashboardPage() {
           icon: BookOpen,
           trend: `${data.stats.loansTrend > 0 ? "+" : ""}${data.stats.loansTrend}%`,
         },
-       
+        {
+          title: "Visitas Mensais",
+          value: data.stats.monthlyVisits?.toString() || "0",
+          icon: TrendingUp,
+          trend: `${data.stats.visitsTrend > 0 ? "+" : ""}${data.stats.visitsTrend}%`,
+        },
       ])
       setMonthlyLoans(data.monthlyLoans)
       setLoanStatus(data.loanStatus)
       setPopularBooks(data.popularBooks)
       setRecentLoans(data.recentLoans)
+      setLibraryName(data.libraryName || "Biblioteca Sem Nome") 
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error)
+      setLibraryName("Erro ao carregar nome")
     } finally {
       setLoading(false)
     }
@@ -131,27 +152,35 @@ export default function AdminDashboardPage() {
   }, [])
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/80 rounded-2xl">
+      <div className="mx-auto max-w-7xl space-y-8 p-4 md:p-8">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+           Olá, biblioteca {loading ? <Skeleton className="h-10 w-48" /> : libraryName}
+          </h1>
+          <p className="text-muted-foreground">
+            Visão geral da sua biblioteca e atividades recentes
+          </p>
+        </div>
 
-      {/* Estatísticas */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <StatCard key={index} stat={stat} loading={loading} />
-        ))}
-        
-      </div>
+        {/* Estatísticas */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, index) => (
+            <StatCard key={index} stat={stat} loading={loading} />
+          ))}
+        </div>
 
-      {/* Gráficos */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <BookLoanChart data={monthlyLoans} loading={loading} />
-        <LoanStatusChart data={loanStatus} loading={loading} />
-      </div>
+        {/* Gráficos */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <BookLoanChart data={monthlyLoans} loading={loading} />
+          <LoanStatusChart data={loanStatus} loading={loading} />
+        </div>
 
-      {/* Tabelas */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <RecentLoansTable loans={recentLoans} loading={loading} />
-        <PopularBooksTable books={popularBooks} loading={loading} />
+        {/* Tabelas */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <RecentLoansTable loans={recentLoans} loading={loading} />
+          <PopularBooksTable books={popularBooks} loading={loading} />
+        </div>
       </div>
     </div>
   )

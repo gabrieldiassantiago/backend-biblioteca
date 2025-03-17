@@ -324,7 +324,7 @@ export async function getBooksByLibraryId(libraryId: string, searchQuery: string
   return { books, count };
 }
 
-// Função para obter sessão do usuário
+// funcao para obter sessão do usuário
 export async function getUserSession() {
   const supabase = await createClient();
   const {

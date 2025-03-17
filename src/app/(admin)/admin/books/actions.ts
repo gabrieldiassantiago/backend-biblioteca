@@ -27,6 +27,23 @@ async function getUserLibraryId() {
   return userData.library_id;
 }
 
+// Função auxiliar para obter o nome da biblioteca
+async function getLibraryName(libraryId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("libraries")
+    .select("name")
+    .eq("id", libraryId)
+    .single();
+
+  if (error || !data?.name) {
+    console.error("Erro ao buscar nome da biblioteca:", error);
+    return "Biblioteca Sem Nome";
+  }
+
+  return data.name;
+}
+
 // Função para cadastrar ou atualizar um livro
 export async function handleSubmitBook(formData: FormData) {
   const supabase = await createClient();
@@ -413,6 +430,9 @@ export const getAllDashboardData = cache(async () => {
   const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
 
   try {
+    // Buscar o nome da biblioteca
+    const libraryName = await getLibraryName(libraryId);
+
     const [
       statsResponse,
       monthlyLoansResponse,
@@ -533,6 +553,7 @@ export const getAllDashboardData = cache(async () => {
       loanStatus,
       popularBooks,
       recentLoans,
+      libraryName, // Adicionamos o nome da biblioteca ao retorno
     };
   } catch (error) {
     console.error("Erro ao buscar todos os dados do dashboard:", error);

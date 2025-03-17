@@ -30,6 +30,7 @@ import { searchBooks, searchUsers, createNewLoan } from "@/app/(admin)/admin/loa
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Book {
   id: string;
@@ -61,27 +62,36 @@ export function NewLoanModal() {
   const [isSearchingUsers, startSearchingUsers] = useTransition();
   const [isCreatingLoan, startCreatingLoan] = useTransition();
 
+  // Debounced search for books
   useEffect(() => {
-    if (bookQuery.trim().length >= 2) {
-      startSearchingBooks(async () => {
-        const results = await searchBooks(bookQuery);
-        console.log("Results:", results);
-        setBooks(results || []);
-      });
-    } else {
-      setBooks([]);
-    }
+    const timer = setTimeout(() => {
+      if (bookQuery.trim().length >= 2) {
+        startSearchingBooks(async () => {
+          const results = await searchBooks(bookQuery);
+          setBooks(results || []);
+        });
+      } else {
+        setBooks([]);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
   }, [bookQuery]);
 
+  // Debounced search for users
   useEffect(() => {
-    if (userQuery.trim().length >= 2) {
-      startSearchingUsers(async () => {
-        const results = await searchUsers(userQuery);
-        setUsers(results || []);
-      });
-    } else {
-      setUsers([]);
-    }
+    const timer = setTimeout(() => {
+      if (userQuery.trim().length >= 2) {
+        startSearchingUsers(async () => {
+          const results = await searchUsers(userQuery);
+          setUsers(results || []);
+        });
+      } else {
+        setUsers([]);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
   }, [userQuery]);
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -118,20 +128,20 @@ export function NewLoanModal() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="bg-primary hover:bg-primary/90">
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
           <PlusCircle className="mr-2 h-4 w-4" />
           Novo Empréstimo
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Novo Empréstimo</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Novo Empréstimo</DialogTitle>
         </DialogHeader>
         
         <div className="grid gap-6 py-4">
           {/* Seleção de Livro */}
           <div className="grid gap-2">
-            <Label htmlFor="book">Livro</Label>
+            <Label htmlFor="book" className="text-sm font-medium">Livro</Label>
             <Popover open={bookSearchOpen} onOpenChange={setBookSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -139,8 +149,8 @@ export function NewLoanModal() {
                   role="combobox"
                   aria-expanded={bookSearchOpen}
                   className={cn(
-                    "justify-between",
-                    !selectedBook && "text-muted-foreground"
+                    "justify-between border-gray-300 hover:bg-gray-50",
+                    !selectedBook && "text-gray-500"
                   )}
                 >
                   {selectedBook ? (
@@ -162,7 +172,7 @@ export function NewLoanModal() {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 w-[400px]">
+              <PopoverContent className="p-0 w-[400px] border border-gray-200 shadow-lg rounded-lg" align="start">
                 <Command shouldFilter={false}>
                   <div className="flex items-center border-b px-3">
                     <CommandInput
@@ -181,44 +191,57 @@ export function NewLoanModal() {
                   <CommandGroup>
                     <ScrollArea className="h-[200px]">
                       <CommandList>
-                        {books.map((book) => (
-                          <CommandItem
-                            key={book.id}
-                            value={book.title}
-                            onSelect={() => {
-                              setSelectedBook(book);
-                              setBookSearchOpen(false);
-                            }}
-                            disabled={book.available <= 0}
-                            className={cn(
-                              "flex items-center justify-between",
-                              book.available <= 0 && "opacity-50 cursor-not-allowed"
-                            )}
-                          >
-                            <div className="flex flex-col">
-                              <span>{book.title}</span>
-                              {book.author && (
-                                <span className="text-xs text-muted-foreground">
-                                  {book.author}
-                                </span>
-                              )}
+                        {isSearchingBooks && bookQuery.length >= 2 ? (
+                          // Skeleton loaders while searching
+                          Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="px-2 py-1.5 flex items-center justify-between">
+                              <div className="flex flex-col gap-1.5">
+                                <Skeleton className="h-4 w-[180px]" />
+                                <Skeleton className="h-3 w-[120px]" />
+                              </div>
+                              <Skeleton className="h-5 w-16 rounded-full" />
                             </div>
-                            <div className="flex items-center">
-                              {book.available > 0 ? (
-                                <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
-                                  {book.available}/{book.stock}
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="ml-2 bg-red-50 text-red-700 border-red-200">
-                                  Indisponível
-                                </Badge>
+                          ))
+                        ) : (
+                          books.map((book) => (
+                            <CommandItem
+                              key={book.id}
+                              value={book.title}
+                              onSelect={() => {
+                                setSelectedBook(book);
+                                setBookSearchOpen(false);
+                              }}
+                              disabled={book.available <= 0}
+                              className={cn(
+                                "flex items-center justify-between",
+                                book.available <= 0 && "opacity-50 cursor-not-allowed"
                               )}
-                              {selectedBook?.id === book.id && (
-                                <Check className="ml-2 h-4 w-4" />
-                              )}
-                            </div>
-                          </CommandItem>
-                        ))}
+                            >
+                              <div className="flex flex-col">
+                                <span>{book.title}</span>
+                                {book.author && (
+                                  <span className="text-xs text-gray-500">
+                                    {book.author}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center">
+                                {book.available > 0 ? (
+                                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">
+                                    {book.available}/{book.stock}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="ml-2 bg-red-50 text-red-700 border-red-200">
+                                    Indisponível
+                                  </Badge>
+                                )}
+                                {selectedBook?.id === book.id && (
+                                  <Check className="ml-2 h-4 w-4" />
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))
+                        )}
                       </CommandList>
                     </ScrollArea>
                   </CommandGroup>
@@ -229,7 +252,7 @@ export function NewLoanModal() {
 
           {/* Seleção de Usuário */}
           <div className="grid gap-2">
-            <Label htmlFor="user">Aluno/Usuário</Label>
+            <Label htmlFor="user" className="text-sm font-medium">Aluno/Usuário</Label>
             <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -237,8 +260,8 @@ export function NewLoanModal() {
                   role="combobox"
                   aria-expanded={userSearchOpen}
                   className={cn(
-                    "justify-between",
-                    !selectedUser && "text-muted-foreground"
+                    "justify-between border-gray-300 hover:bg-gray-50",
+                    !selectedUser && "text-gray-500"
                   )}
                 >
                   {selectedUser ? (
@@ -251,7 +274,7 @@ export function NewLoanModal() {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 w-[400px]">
+              <PopoverContent className="p-0 w-[400px] border border-gray-200 shadow-lg rounded-lg" align="start">
                 <Command shouldFilter={false}>
                   <div className="flex items-center border-b px-3">
                     <CommandInput
@@ -270,28 +293,40 @@ export function NewLoanModal() {
                   <CommandGroup>
                     <ScrollArea className="h-[200px]">
                       <CommandList>
-                        {users.map((user) => (
-                          <CommandItem
-                            key={user.id}
-                            value={user.full_name}
-                            onSelect={() => {
-                              setSelectedUser(user);
-                              setUserSearchOpen(false);
-                            }}
-                          >
-                            <div className="flex flex-col">
-                              <span>{user.full_name}</span>
-                              {user.email && (
-                                <span className="text-xs text-muted-foreground">
-                                  {user.email}
-                                </span>
-                              )}
+                        {isSearchingUsers && userQuery.length >= 2 ? (
+                          // Skeleton loaders while searching
+                          Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="px-2 py-1.5 flex items-center justify-between">
+                              <div className="flex flex-col gap-1.5">
+                                <Skeleton className="h-4 w-[180px]" />
+                                <Skeleton className="h-3 w-[120px]" />
+                              </div>
                             </div>
-                            {selectedUser?.id === user.id && (
-                              <Check className="ml-auto h-4 w-4" />
-                            )}
-                          </CommandItem>
-                        ))}
+                          ))
+                        ) : (
+                          users.map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={user.full_name}
+                              onSelect={() => {
+                                setSelectedUser(user);
+                                setUserSearchOpen(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span>{user.full_name}</span>
+                                {user.email && (
+                                  <span className="text-xs text-gray-500">
+                                    {user.email}
+                                  </span>
+                                )}
+                              </div>
+                              {selectedUser?.id === user.id && (
+                                <Check className="ml-auto h-4 w-4" />
+                              )}
+                            </CommandItem>
+                          ))
+                        )}
                       </CommandList>
                     </ScrollArea>
                   </CommandGroup>
@@ -305,13 +340,14 @@ export function NewLoanModal() {
           <Button 
             variant="outline" 
             onClick={() => handleOpenChange(false)}
+            className="border-gray-300"
           >
             Cancelar
           </Button>
           <Button 
             onClick={handleCreateLoan}
             disabled={!selectedBook || !selectedUser || isCreatingLoan}
-            className="ml-2"
+            className="ml-2 bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isCreatingLoan ? (
               <>
