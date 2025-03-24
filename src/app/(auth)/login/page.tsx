@@ -56,7 +56,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div className="relative z-10 text-center px-8 max-w-md">
           <div className="mb-8">
             <div className=" rounded-2xl backdrop-blur-sm mb-6 inline-block">
-              <Image  src="/logounisal.svg" color='white' alt="Logo UNISAL" width={250} height={250} className="invert-0" />
+              <Image  src="/logounisal.svg" color='white' alt="Logo UNISAL" width={400} height={250} className="invert-0" />
             </div>
           </div>
         </div>
