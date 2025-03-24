@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, BookOpen, Mail, User, Lock, Library } from "lucide-react"
+import { AlertCircle, Mail, User, Lock, Library } from "lucide-react"
 import Image from "next/image"
 
 export default function RegisterPage() {
@@ -76,32 +76,13 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex bg-[#f8f9fc]">
-      {/* Left Section - Illustration */}
       <div className="hidden lg:flex w-1/2 bg-primary justify-center items-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(to_bottom,transparent,white)]"></div>
         <div className="absolute top-10 left-10">
-          <Image src="/logounisal.svg" alt="Logo UNISAL" width={150} height={50} className="" />
         </div>
         <div className="relative z-10 text-center px-8 max-w-md">
-          <div className="mb-8">
-            <div className="bg-white/10 p-6 rounded-2xl backdrop-blur-sm mb-6 inline-block">
-              <BookOpen className="h-16 w-16 text-white" strokeWidth={1.5} />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Quero ser membro</h1>
-          <p className="text-white/80 text-lg mb-8">
-            Crie sua conta e sua biblioteca para começar a gerenciar hoje mesmo!
-          </p>
-          <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-              <div className="text-white text-xl font-bold">Fácil</div>
-              <div className="text-white/70 text-xs">Configuração</div>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-              <div className="text-white text-xl font-bold">Rápido</div>
-              <div className="text-white/70 text-xs">Cadastro</div>
-            </div>
-          </div>
+         
+          <Image src="/logounisal.svg" alt="Logo UNISAL" width={500} height={500} className="" />
+       
         </div>
       </div>
 

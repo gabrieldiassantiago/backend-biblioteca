@@ -13,7 +13,6 @@ interface LoginPageProps {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  // Await the searchParams prop since it’s a Promise
   const resolvedSearchParams = await searchParams;
   const error = resolvedSearchParams.error;
 
@@ -52,7 +51,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className="min-h-screen flex bg-[#f8f9fc]">
-      {/* Left Section - Illustration */}
       <div className="hidden lg:flex w-1/2 bg-primary justify-center items-center relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(to_bottom,transparent,white)]"></div>
         <div className="relative z-10 text-center px-8 max-w-md">
@@ -61,27 +59,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               <Image src="/logounisal.svg" alt="Logo UNISAL" width={500} height={500} className="" />
             </div>
           </div>
-          <p className="text-white/80 text-lg mb-8">
-            Gerencie sua biblioteca digital com facilidade e segurança
-          </p>
-          <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-              <div className="text-white text-xl font-bold">100+</div>
-              <div className="text-white/70 text-xs">Livros</div>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-              <div className="text-white text-xl font-bold">50+</div>
-              <div className="text-white/70 text-xs">Usuários</div>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-              <div className="text-white text-xl font-bold">24/7</div>
-              <div className="text-white/70 text-xs">Acesso</div>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Right Section - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-2xl shadow-sm">
           <div className="text-center space-y-2">
@@ -94,12 +74,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           </div>
 
-          {/* Error Alert Component */}
+          {/* COMPONENTE DO ERRO */}
           {error && <ErrorAlert />}
 
           <form action={handleLogin} className="space-y-5">
             <div className="space-y-4">
-              {/* Email Input */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                   Email
@@ -117,7 +96,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </div>
               </div>
 
-              {/* Password Input */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="password" className="text-sm font-medium text-gray-700">
@@ -146,8 +124,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
             <SubmitButton />
 
-            {/* Links */}
-            <div className="text-center text-sm">
+            <div className="tex-center text-sm">
               <span className="text-gray-500">Não tem uma conta? </span>
               <Link
                 href="/register"
