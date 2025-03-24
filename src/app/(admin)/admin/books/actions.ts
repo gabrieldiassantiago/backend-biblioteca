@@ -124,32 +124,34 @@ export async function handleDeleteBook(bookId: string) {
   const libraryId = await getUserLibraryId();
 
   try {
+    // Verifica se o livro pertence à biblioteca do usuário
     const { data: book } = await supabase.from("books").select("library_id").eq("id", bookId).single();
-
     if (book?.library_id !== libraryId) {
       throw new Error("Você não tem permissão para excluir este livro");
     }
 
+    // Verifica empréstimos ativos
     const { data: activeLoans, error: loansError } = await supabase
-    .from("loans")
-    .select("id")
-    .eq("book_id", bookId)
-    .eq("status", "active")
-    .limit(1);
+      .from("loans")
+      .select("id")
+      .eq("book_id", bookId)
+      .eq("status", "active")
+      .limit(1);
   
-  console.log("Resultado da consulta de empréstimos ativos:", { activeLoans, loansError });
-  if (loansError) {
-    console.error("Erro na consulta de empréstimos ativos:", loansError);
-    throw new Error(`Erro ao verificar empréstimos ativos: ${loansError.message}`);
-  }
-  if (activeLoans && activeLoans.length > 0) {
-    throw new Error("Não é possível excluir um livro com empréstimos ativos.");
-  }
+    console.log("Resultado da consulta de empréstimos ativos:", { activeLoans, loansError });
+    if (loansError) {
+      console.error("Erro na consulta de empréstimos ativos:", loansError);
+      throw new Error(`Erro ao verificar empréstimos ativos: ${loansError.message}`);
+    }
+    if (activeLoans && activeLoans.length > 0) {
+      throw new Error("Não é possível excluir um livro com empréstimos ativos.");
+    }
       
+    // Exclui o livro
     const { error: deleteError } = await supabase.from("books").delete().eq("id", bookId).eq("library_id", libraryId);
-
     if (deleteError) throw deleteError;
 
+    // Revalida os caminhos
     revalidatePath("/admin/books");
     revalidatePath("/dashboard");
   } catch (error) {
