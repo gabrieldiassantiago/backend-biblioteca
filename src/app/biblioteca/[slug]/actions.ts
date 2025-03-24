@@ -1,5 +1,6 @@
 "use server";
 
+import { sendEmail } from "@/app/lib/email-service";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -121,7 +122,7 @@ export async function handleRegisterAndBorrow(formData: FormData) {
     throw new Error("Este livro não está disponível para empréstimo.");
   }
 
-  // Criar o empréstimo como "pending" ou seja, a biblioteca ainda não confirmou o empréstimo, ela precisa aceitar o empréstimo
+  // Criar o empréstimo como "pending"
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 7);
   const loanData = {
@@ -134,7 +135,8 @@ export async function handleRegisterAndBorrow(formData: FormData) {
   };
   console.log("Dados do empréstimo a serem inseridos:", loanData);
 
-  const { error: loanInsertError } = await supabase.from("loans").insert(loanData);
+  // Inserir o empréstimo e obter o id
+  const { data: loan, error: loanInsertError } = await supabase.from("loans").insert(loanData).select("id").single();
 
   if (loanInsertError) {
     console.error("Erro ao criar empréstimo:", loanInsertError.message);
@@ -142,8 +144,12 @@ export async function handleRegisterAndBorrow(formData: FormData) {
   }
   console.log("Empréstimo criado com sucesso");
 
+  // Agora, enviamos o e-mail
+  await sendEmail(loan.id, "newLoan");
+
   return { success: true, message: "Empréstimo realizado com sucesso!" };
 }
+
 
 // Função para solicitar um empréstimo (usuário já autenticado)
 export async function handleBorrow(formData: FormData) {
@@ -203,7 +209,8 @@ export async function handleBorrow(formData: FormData) {
   };
   console.log("Dados do empréstimo a serem inseridos:", loanData);
 
-  const { error: loanInsertError } = await supabase.from("loans").insert(loanData);
+  // Inserir o empréstimo e obter o id
+  const { data: loan, error: loanInsertError } = await supabase.from("loans").insert(loanData).select("id").single();
 
   if (loanInsertError) {
     console.error("Erro ao criar empréstimo:", loanInsertError.message);
@@ -211,8 +218,12 @@ export async function handleBorrow(formData: FormData) {
   }
   console.log("Empréstimo criado com sucesso");
 
+  // Agora, enviar o e-mail
+  await sendEmail(loan.id, "newLoan");
+
   return { success: true, message: "Empréstimo realizado com sucesso!" };
 }
+
 
 // Função para logout
 export async function handleLogout() {

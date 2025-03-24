@@ -120,31 +120,148 @@ function getBaseTemplate(content: string, loan: Loan): string {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Biblioteca ${loan.library_name}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          color: #333333;
+          background-color: #f5f5f5;
+          font-size: 16px;
+          line-height: 1.6;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+          margin-top: 0;
+          font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        
+        p {
+          margin: 0 0 16px;
+        }
+        
+        .container {
+          max-width: 600px;
+          margin: 20px auto;
+          background-color: #ffffff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+          padding: 30px 0;
+          text-align: center;
+          background-color: #2563eb;
+          color: #ffffff;
+        }
+        
+        .header h1 {
+          margin: 0;
+          font-size: 28px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+        }
+        
+        .content {
+          padding: 40px;
+        }
+        
+        .footer {
+          padding: 20px;
+          text-align: center;
+          background-color: #f0f0f0;
+          font-size: 14px;
+          color: #666666;
+        }
+        
+        .info-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 24px 0;
+          background-color: #f9f9f9;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid #e0e0e0;
+        }
+        
+        .info-table td {
+          padding: 16px;
+          border-bottom: 1px solid #e0e0e0;
+          font-size: 16px;
+        }
+        
+        .info-table tr:last-child td {
+          border-bottom: none;
+        }
+        
+        .label {
+          font-weight: 700;
+          width: 40%;
+          color: #4b5563;
+        }
+        
+        .alert-box {
+          padding: 20px;
+          border-radius: 8px;
+          margin: 24px 0;
+          font-size: 16px;
+        }
+        
+        .signature {
+          margin-top: 32px;
+          padding-top: 16px;
+          border-top: 1px solid #e0e0e0;
+          font-size: 16px;
+        }
+        
+        .button {
+          display: inline-block;
+          padding: 12px 24px;
+          background-color: #2563eb;
+          color: #ffffff;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 700;
+          margin: 16px 0;
+          text-align: center;
+        }
+        
+        .logo {
+          margin-bottom: 16px;
+        }
+        
+        .divider {
+          height: 1px;
+          background-color: #e0e0e0;
+          margin: 24px 0;
+        }
+      </style>
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333333; background-color: #f5f5f5;">
-      <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; margin: 20px auto; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <body>
+      <div class="container">
         <!-- Header -->
-        <tr>
-          <td style="padding: 30px 0; text-align: center; background-color: #1a3d66; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Biblioteca ${loan.library_name}</h1>
-          </td>
-        </tr>
+        <div class="header">
+          <svg class="logo" width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 19.5C4 18.837 4.26339 18.2011 4.73223 17.7322C5.20107 17.2634 5.83696 17 6.5 17H20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6.5 2H20V22H6.5C5.83696 22 5.20107 21.7366 4.73223 21.2678C4.26339 20.7989 4 20.163 4 19.5V4.5C4 3.83696 4.26339 3.20107 4.73223 2.73223C5.20107 2.26339 5.83696 2 6.5 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h1>Biblioteca ${loan.library_name}</h1>
+        </div>
         
         <!-- Content -->
-        <tr>
-          <td style="padding: 30px 40px;">
-            ${content}
-          </td>
-        </tr>
+        <div class="content">
+          ${content}
+        </div>
         
         <!-- Footer -->
-        <tr>
-          <td style="padding: 20px; text-align: center; background-color: #f0f0f0; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-size: 14px; color: #666666;">
-            <p style="margin: 0;">Este é um email automático, por favor não responda.</p>
-            <p style="margin: 10px 0 0 0;">© ${new Date().getFullYear()} Biblioteca ${loan.library_name}. Todos os direitos reservados.</p>
-          </td>
-        </tr>
-      </table>
+        <div class="footer">
+          <p>Este é um email automático, por favor não responda.</p>
+          <p style="margin-top: 8px;">© ${new Date().getFullYear()} Biblioteca ${loan.library_name}. Todos os direitos reservados.</p>
+        </div>
+      </div>
     </body>
     </html>
   `
@@ -156,40 +273,54 @@ const templates: {
   overdueLoan: (loan: Loan) => { subject: string; html: string }
   rejectedLoan: (loan: Loan) => { subject: string; html: string }
   returnedLoan: (loan: Loan) => { subject: string; html: string }
+  updateLoan: (loan: Loan) => { subject: string; html: string }
 } = {
   newLoan: (loan: Loan) => {
     const content = `
-      <h2 style="color: #1a3d66; margin-top: 0; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Novo Empréstimo Registrado</h2>
+      <h2 style="color: #2563eb; font-size: 24px; margin-bottom: 24px; border-bottom: 2px solid #e0e0e0; padding-bottom: 12px;">
+        Novo Empréstimo Registrado
+      </h2>
       
-      <p style="font-size: 16px; line-height: 1.5;">Olá <strong>${loan.users.full_name}</strong>,</p>
+      <p style="font-size: 18px; margin-bottom: 16px;">
+        Olá <strong>${loan.users.full_name}</strong>,
+      </p>
       
-      <p style="font-size: 16px; line-height: 1.5;">Um novo empréstimo foi registrado em seu nome na biblioteca ${loan.library_name}:</p>
+      <p style="font-size: 18px; margin-bottom: 24px;">
+        Um novo empréstimo foi registrado em seu nome na biblioteca ${loan.library_name}:
+      </p>
       
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9f9f9; border-radius: 6px;">
+      <table class="info-table">
         <tr>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; font-weight: bold; width: 40%;">Livro:</td>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">${loan.books.title}</td>
+          <td class="label">Livro:</td>
+          <td style="font-size: 18px;"><strong>${loan.books.title}</strong></td>
         </tr>
         <tr>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">Data do empréstimo:</td>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">${formatDate(loan.borrowed_at)}</td>
+          <td class="label">Data do empréstimo:</td>
+          <td>${formatDate(loan.borrowed_at)}</td>
         </tr>
         <tr>
-          <td style="padding: 12px 15px; font-weight: bold;">Data de devolução:</td>
-          <td style="padding: 12px 15px;"><strong style="color: #e63946;">${formatDate(loan.due_date)}</strong></td>
+          <td class="label">Data de devolução:</td>
+          <td><strong style="color: #2563eb; font-size: 18px;">${formatDate(loan.due_date)}</strong></td>
         </tr>
       </table>
       
-      <div style="background-color: #e8f4f8; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <p style="margin: 0; font-size: 15px;">Por favor, devolva o livro até a data de vencimento para evitar atrasos e possíveis penalidades.</p>
+      <div class="alert-box" style="background-color: #dbeafe; border-left: 4px solid #2563eb;">
+        <p style="margin: 0; color: #1e40af;">
+          <strong>Lembrete:</strong> Por favor, devolva o livro até a data de vencimento para evitar atrasos e possíveis penalidades.
+        </p>
       </div>
       
-      <p style="font-size: 16px; line-height: 1.5; margin-top: 25px;">Agradecemos por utilizar nossos serviços!</p>
+      <a href="#" class="button">
+        Ver Detalhes do Empréstimo
+      </a>
       
-      <p style="font-size: 16px; line-height: 1.5;">
-        Atenciosamente,<br>
-        <strong>Equipe Biblioteca ${loan.library_name}</strong>
-      </p>
+      <div class="signature">
+        <p>Agradecemos por utilizar nossos serviços!</p>
+        <p style="margin-top: 16px;">
+          Atenciosamente,<br>
+          <strong>Equipe Biblioteca ${loan.library_name}</strong>
+        </p>
+      </div>
     `
 
     return {
@@ -200,33 +331,46 @@ const templates: {
 
   overdueLoan: (loan: Loan) => {
     const content = `
-      <h2 style="color: #e63946; margin-top: 0; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Empréstimo Atrasado</h2>
+      <h2 style="color: #dc2626; font-size: 24px; margin-bottom: 24px; border-bottom: 2px solid #e0e0e0; padding-bottom: 12px;">
+        Empréstimo Atrasado
+      </h2>
       
-      <p style="font-size: 16px; line-height: 1.5;">Olá <strong>${loan.users.full_name}</strong>,</p>
+      <p style="font-size: 18px; margin-bottom: 16px;">
+        Olá <strong>${loan.users.full_name}</strong>,
+      </p>
       
-      <p style="font-size: 16px; line-height: 1.5;">O seguinte empréstimo está <strong style="color: #e63946;">atrasado</strong> na biblioteca ${loan.library_name}:</p>
+      <p style="font-size: 18px; margin-bottom: 24px;">
+        O seguinte empréstimo está <strong style="color: #dc2626;">atrasado</strong> na biblioteca ${loan.library_name}:
+      </p>
       
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9f9f9; border-radius: 6px;">
+      <table class="info-table">
         <tr>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; font-weight: bold; width: 40%;">Livro:</td>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">${loan.books.title}</td>
+          <td class="label">Livro:</td>
+          <td style="font-size: 18px;"><strong>${loan.books.title}</strong></td>
         </tr>
         <tr>
-          <td style="padding: 12px 15px; font-weight: bold;">Data de devolução prevista:</td>
-          <td style="padding: 12px 15px;"><strong style="color: #e63946;">${formatDate(loan.due_date)}</strong></td>
+          <td class="label">Data de devolução prevista:</td>
+          <td><strong style="color: #dc2626; font-size: 18px;">${formatDate(loan.due_date)}</strong></td>
         </tr>
       </table>
       
-      <div style="background-color: #fae5e7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #e63946;">
-        <p style="margin: 0; font-size: 15px; color: #d32f2f;"><strong>Atenção:</strong> Por favor, devolva o livro o mais rápido possível para evitar penalidades adicionais.</p>
+      <div class="alert-box" style="background-color: #fee2e2; border-left: 4px solid #dc2626;">
+        <p style="margin: 0; color: #b91c1c;">
+          <strong>Atenção:</strong> Por favor, devolva o livro o mais rápido possível para evitar penalidades adicionais.
+        </p>
       </div>
       
-      <p style="font-size: 16px; line-height: 1.5; margin-top: 25px;">Caso já tenha devolvido o livro, por favor desconsidere este email.</p>
+      <a href="#" class="button" style="background-color: #dc2626;">
+        Regularizar Empréstimo
+      </a>
       
-      <p style="font-size: 16px; line-height: 1.5;">
-        Atenciosamente,<br>
-        <strong>Equipe Biblioteca ${loan.library_name}</strong>
-      </p>
+      <div class="signature">
+        <p>Caso já tenha devolvido o livro, por favor desconsidere este email.</p>
+        <p style="margin-top: 16px;">
+          Atenciosamente,<br>
+          <strong>Equipe Biblioteca ${loan.library_name}</strong>
+        </p>
+      </div>
     `
 
     return {
@@ -237,31 +381,53 @@ const templates: {
 
   rejectedLoan: (loan: Loan) => {
     const content = `
-      <h2 style="color: #6c757d; margin-top: 0; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Empréstimo Rejeitado</h2>
+      <h2 style="color: #6b7280; font-size: 24px; margin-bottom: 24px; border-bottom: 2px solid #e0e0e0; padding-bottom: 12px;">
+        Empréstimo Rejeitado
+      </h2>
       
-      <p style="font-size: 16px; line-height: 1.5;">Olá <strong>${loan.users.full_name}</strong>,</p>
+      <p style="font-size: 18px; margin-bottom: 16px;">
+        Olá <strong>${loan.users.full_name}</strong>,
+      </p>
       
-      <p style="font-size: 16px; line-height: 1.5;">Seu pedido de empréstimo foi rejeitado na biblioteca ${loan.library_name}:</p>
+      <p style="font-size: 18px; margin-bottom: 24px;">
+        Seu pedido de empréstimo foi rejeitado na biblioteca ${loan.library_name}:
+      </p>
       
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9f9f9; border-radius: 6px;">
+      <table class="info-table">
         <tr>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; font-weight: bold; width: 40%;">Livro:</td>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">${loan.books.title}</td>
+          <td class="label">Livro:</td>
+          <td style="font-size: 18px;"><strong>${loan.books.title}</strong></td>
         </tr>
         <tr>
-          <td style="padding: 12px 15px; font-weight: bold;">Motivo:</td>
-          <td style="padding: 12px 15px;">Estoque indisponível ou limite de empréstimos excedido</td>
+          <td class="label">Motivo:</td>
+          <td>Estoque indisponível ou limite de empréstimos excedido</td>
         </tr>
       </table>
       
-      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #6c757d;">
-        <p style="margin: 0; font-size: 15px;">Entre em contato com a biblioteca para mais informações ou para verificar a disponibilidade de outros títulos.</p>
+      <div class="alert-box" style="background-color: #f3f4f6; border-left: 4px solid #6b7280;">
+        <p style="margin: 0; color: #4b5563;">
+          <strong>Informação:</strong> Entre em contato com a biblioteca para mais informações ou para verificar a disponibilidade de outros títulos.
+        </p>
       </div>
       
-      <p style="font-size: 16px; line-height: 1.5;">
-        Atenciosamente,<br>
-        <strong>Equipe Biblioteca ${loan.library_name}</strong>
+      <div class="divider"></div>
+      
+      <h3 style="color: #4b5563; font-size: 20px; margin-bottom: 16px;">Outras opções disponíveis</h3>
+      
+      <p style="margin-bottom: 24px;">
+        Você pode verificar outros títulos similares disponíveis em nosso acervo:
       </p>
+      
+      <a href="#" class="button" style="background-color: #6b7280;">
+        Explorar Catálogo
+      </a>
+      
+      <div class="signature">
+        <p style="margin-top: 16px;">
+          Atenciosamente,<br>
+          <strong>Equipe Biblioteca ${loan.library_name}</strong>
+        </p>
+      </div>
     `
 
     return {
@@ -270,33 +436,113 @@ const templates: {
     }
   },
 
-  returnedLoan: (loan: Loan) => {
+
+  updateLoan: (loan: Loan) => {
     const content = `
-      <h2 style="color: #2e7d32; margin-top: 0; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">Empréstimo Devolvido</h2>
+      <h2 style="color: #2563eb; font-size: 24px; margin-bottom: 24px; border-bottom: 2px solid #e0e0e0; padding-bottom: 12px;">
+        Data de Devolução Atualizada
+      </h2>
       
-      <p style="font-size: 16px; line-height: 1.5;">Olá <strong>${loan.users.full_name}</strong>,</p>
+      <p style="font-size: 18px; margin-bottom: 16px;">
+        Olá <strong>${loan.users.full_name}</strong>,
+      </p>
       
-      <p style="font-size: 16px; line-height: 1.5;">O seguinte empréstimo foi marcado como <strong style="color: #2e7d32;">devolvido</strong> na biblioteca ${loan.library_name}:</p>
+      <p style="font-size: 18px; margin-bottom: 24px;">
+        A data de devolução do seu empréstimo na biblioteca ${loan.library_name} foi atualizada:
+      </p>
       
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9f9f9; border-radius: 6px;">
+      <table class="info-table">
         <tr>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; font-weight: bold; width: 40%;">Livro:</td>
-          <td style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0;">${loan.books.title}</td>
+          <td class="label">Livro:</td>
+          <td style="font-size: 18px;"><strong>${loan.books.title}</strong></td>
         </tr>
         <tr>
-          <td style="padding: 12px 15px; font-weight: bold;">Data de devolução:</td>
-          <td style="padding: 12px 15px;"><strong style="color: #2e7d32;">${formatDate(loan.returned_at || new Date().toISOString())}</strong></td>
+          <td class="label">Data de empréstimo:</td>
+          <td>${formatDate(loan.borrowed_at)}</td>
+        </tr>
+        <tr>
+          <td class="label">Nova data de devolução:</td>
+          <td><strong style="color: #2563eb; font-size: 18px;">${formatDate(loan.due_date)}</strong></td>
         </tr>
       </table>
       
-      <div style="background-color: #e8f5e9; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2e7d32;">
-        <p style="margin: 0; font-size: 15px;">Obrigado por utilizar nossa biblioteca! Esperamos vê-lo novamente em breve.</p>
+      <div class="alert-box" style="background-color: #dbeafe; border-left: 4px solid #2563eb;">
+        <p style="margin: 0; color: #1e40af;">
+          <strong>Lembrete:</strong> Por favor, devolva o livro até a nova data de vencimento para evitar atrasos.
+        </p>
       </div>
       
-      <p style="font-size: 16px; line-height: 1.5;">
-        Atenciosamente,<br>
-        <strong>Equipe Biblioteca ${loan.library_name}</strong>
+      <a href="#" class="button">
+        Ver Detalhes do Empréstimo
+      </a>
+      
+      <div class="signature">
+        <p>Se precisar de mais informações, entre em contato conosco!</p>
+        <p style="margin-top: 16px;">
+          Atenciosamente,<br>
+          <strong>Equipe Biblioteca ${loan.library_name}</strong>
+        </p>
+      </div>
+    `
+  
+    return {
+      subject: `Data de Devolução Atualizada - ${loan.library_name}`,
+      html: getBaseTemplate(content, loan),
+    }
+  },
+
+
+
+  returnedLoan: (loan: Loan) => {
+    const content = `
+      <h2 style="color: #16a34a; font-size: 24px; margin-bottom: 24px; border-bottom: 2px solid #e0e0e0; padding-bottom: 12px;">
+        Empréstimo Devolvido
+      </h2>
+      
+      <p style="font-size: 18px; margin-bottom: 16px;">
+        Olá <strong>${loan.users.full_name}</strong>,
       </p>
+      
+      <p style="font-size: 18px; margin-bottom: 24px;">
+        O seguinte empréstimo foi marcado como <strong style="color: #16a34a;">devolvido</strong> na biblioteca ${loan.library_name}:
+      </p>
+      
+      <table class="info-table">
+        <tr>
+          <td class="label">Livro:</td>
+          <td style="font-size: 18px;"><strong>${loan.books.title}</strong></td>
+        </tr>
+        <tr>
+          <td class="label">Data de devolução:</td>
+          <td><strong style="color: #16a34a; font-size: 18px;">${formatDate(loan.returned_at || new Date().toISOString())}</strong></td>
+        </tr>
+      </table>
+      
+      <div class="alert-box" style="background-color: #dcfce7; border-left: 4px solid #16a34a;">
+        <p style="margin: 0; color: #166534;">
+          <strong>Obrigado!</strong> Agradecemos por utilizar nossa biblioteca e por devolver o livro.
+        </p>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <h3 style="color: #16a34a; font-size: 20px; margin-bottom: 16px;">Recomendações para você</h3>
+      
+      <p style="margin-bottom: 24px;">
+        Com base em seus interesses, você pode gostar de outros títulos em nosso acervo:
+      </p>
+      
+      <a href="#" class="button" style="background-color: #16a34a;">
+        Ver Recomendações
+      </a>
+      
+      <div class="signature">
+        <p>Esperamos vê-lo novamente em breve!</p>
+        <p style="margin-top: 16px;">
+          Atenciosamente,<br>
+          <strong>Equipe Biblioteca ${loan.library_name}</strong>
+        </p>
+      </div>
     `
 
     return {
@@ -306,7 +552,7 @@ const templates: {
   },
 }
 
-export async function sendEmail(loanId: string, type: "newLoan" | "overdueLoan" | "rejectedLoan" | "returnedLoan") {
+export async function sendEmail(loanId: string, type: "newLoan" | "overdueLoan" | "rejectedLoan" | "returnedLoan" | "updateLoan") {
   try {
     const loan = await getLoanDetails(loanId)
 
@@ -330,4 +576,3 @@ export async function sendEmail(loanId: string, type: "newLoan" | "overdueLoan" 
     throw new Error("Falha ao enviar email")
   }
 }
-

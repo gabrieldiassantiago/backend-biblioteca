@@ -1,10 +1,10 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
-import { PieChartIcon } from 'lucide-react'
+import { PieChartIcon } from "lucide-react"
 
 interface LoanStatusData {
   name: string
@@ -13,21 +13,23 @@ interface LoanStatusData {
 }
 
 export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loading: boolean }) {
+  const [mounted, setMounted] = useState(false)
   const [chartSize, setChartSize] = useState({
-    innerRadius: 60,
-    outerRadius: 90,
-    fontSize: 12,
+    innerRadius: 0, // Mudado para 0 para criar um gráfico de pizza sólido
+    outerRadius: 110,
+    fontSize: 16,
   })
 
   useEffect(() => {
+    setMounted(true)
     const handleResize = () => {
       const width = window.innerWidth
       if (width < 400) {
-        setChartSize({ innerRadius: 40, outerRadius: 60, fontSize: 10 })
+        setChartSize({ innerRadius: 0, outerRadius: 70, fontSize: 14 })
       } else if (width < 768) {
-        setChartSize({ innerRadius: 50, outerRadius: 75, fontSize: 11 })
+        setChartSize({ innerRadius: 0, outerRadius: 90, fontSize: 15 })
       } else {
-        setChartSize({ innerRadius: 60, outerRadius: 90, fontSize: 12 })
+        setChartSize({ innerRadius: 0, outerRadius: 110, fontSize: 16 })
       }
     }
 
@@ -36,88 +38,106 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
+  // Cores mais distintas e contrastantes
+  const COLORS = ["#4f46e5", "#10b981", "#ef4444", "#f59e0b", "#6366f1"]
+
   // Traduzir os nomes para português no gráfico
-  const translatedData = data.map((entry) => ({
+  const translatedData = data.map((entry, index) => ({
     ...entry,
     name:
       entry.name === "Ativos"
         ? "Ativos"
         : entry.name === "Devolvidos"
-        ? "Devolvidos"
-        : entry.name === "Atrasados"
-        ? "Atrasados"
-        : entry.name === "Pendentes"
-        ? "Pendentes"
-        : entry.name === "Rejeitados"
-        ? "Rejeitados"
-        : entry.name,
+          ? "Devolvidos"
+          : entry.name === "Atrasados"
+            ? "Atrasados"
+            : entry.name === "Pendentes"
+              ? "Pendentes"
+              : entry.name === "Rejeitados"
+                ? "Rejeitados"
+                : entry.name,
+    color: COLORS[index % COLORS.length],
   }))
 
+  // Renderizar a legenda personalizada para maior clareza
+  const renderCustomLegend = () => {
+    return (
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4">
+        {translatedData.map((entry, index) => (
+          <div key={`legend-${index}`} className="flex items-center">
+            <div className="h-5 w-5 mr-2" style={{ backgroundColor: entry.color, borderRadius: "4px" }} />
+            <span className="text-base font-medium">
+              {entry.name}: {entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <Card className="overflow-hidden border-none bg-gradient-to-br from-card to-card/80 shadow-md transition-all hover:shadow-lg">
-      <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div>
-          <CardTitle className="text-xl font-bold">Status dos Empréstimos</CardTitle>
-          <CardDescription>Distribuição dos empréstimos por status</CardDescription>
+    <Card className="border-2">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <PieChartIcon className="h-6 w-6 text-primary" />
+            <CardTitle className="text-xl font-bold">Status dos Empréstimos</CardTitle>
+          </div>
         </div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-          <PieChartIcon className="h-4 w-4 text-primary" />
-        </div>
+        <CardDescription className="text-base mt-1">Distribuição dos empréstimos por status</CardDescription>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] md:h-[350px]">
-        {loading ? (
-          <div className="flex h-full w-full items-center justify-center">
-            <Skeleton className="h-32 w-32 rounded-full" />
-          </div>
-        ) : data.length === 0 ? (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            Nenhum dado disponível
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={translatedData}
-                cx="50%"
-                cy="50%"
-                innerRadius={chartSize.innerRadius}
-                outerRadius={chartSize.outerRadius}
-                paddingAngle={2}
-                dataKey="value"
-                label={({ name, percent }) => (percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : "")}
-                labelLine={false}
-                animationDuration={1500}
-                animationBegin={200}
-              >
-                {translatedData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color} 
-                    stroke="hsl(var(--background))" 
-                    strokeWidth={2}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  borderColor: "hsl(var(--border))",
-                  borderRadius: "var(--radius)",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                  fontSize: `${chartSize.fontSize}px`,
-                }}
-                formatter={(value: number, name: string) => [`${value} empréstimos`, name]}
-              />
-              <Legend
-                verticalAlign="bottom"
-                height={36}
-                wrapperStyle={{ fontSize: `${chartSize.fontSize}px` }}
-                formatter={(value) => <span className="text-foreground">{value}</span>}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        )}
+      <CardContent className="pt-4">
+        <div className="h-[300px]">
+          {loading ? (
+            <div className="flex h-full w-full items-center justify-center">
+              <Skeleton className="h-32 w-32 rounded-full" />
+            </div>
+          ) : data.length === 0 ? (
+            <div className="flex h-full w-full items-center justify-center text-xl font-medium">
+              Nenhum dado disponível
+            </div>
+          ) : mounted ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={translatedData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={chartSize.innerRadius}
+                  outerRadius={chartSize.outerRadius}
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ percent }) => (percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : "")}
+                  labelLine={false}
+                  animationDuration={1000}
+                  animationBegin={200}
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  {translatedData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "2px solid #333",
+                    borderRadius: "8px",
+                    fontSize: `${chartSize.fontSize}px`,
+                    fontWeight: "bold",
+                    padding: "10px",
+                  }}
+                  formatter={(value: number, name: string) => [`${value} empréstimos`, name]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : null}
+        </div>
+
+        {/* Legenda personalizada mais clara */}
+        {!loading && mounted && data.length > 0 && renderCustomLegend()}
       </CardContent>
     </Card>
   )
 }
+

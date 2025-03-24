@@ -1,9 +1,10 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BookOpen } from 'lucide-react'
+import { useState, useEffect } from "react"
 
 interface MonthlyLoanData {
   name: string
@@ -11,63 +12,108 @@ interface MonthlyLoanData {
 }
 
 export function BookLoanChart({ data, loading }: { data: MonthlyLoanData[]; loading: boolean }) {
+  const [mounted, setMounted] = useState(false)
+  const [fontSize, setFontSize] = useState(14)
+  
+  useEffect(() => {
+    setMounted(true)
+    
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setFontSize(12);
+      } else {
+        setFontSize(14);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [])
+
+  // Simplificar os nomes dos meses para versões de 3 letras
+  const simplifiedData = data.map(item => ({
+    ...item,
+    name: item.name.substring(0, 3)
+  }));
+
   return (
-    <Card className="overflow-hidden border-none bg-gradient-to-br from-card to-card/80 shadow-md transition-all hover:shadow-lg">
-      <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div>
-          <CardTitle className="text-xl font-bold">Empréstimos por Mês</CardTitle>
-          <CardDescription>Número total de empréstimos realizados por mês</CardDescription>
-        </div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-          <BookOpen className="h-4 w-4 text-primary" />
-        </div>
-      </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] md:h-[350px]">
-        {loading ? (
-          <div className="flex h-full w-full items-center justify-center">
-            <Skeleton className="h-32 w-32 rounded-full" />
+    <Card className="border-2">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-primary" />
+            <CardTitle className="text-xl font-bold">Empréstimos por Mês</CardTitle>
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-              <defs>
-                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.2} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => {
-                  // On small screens, abbreviate month names
-                  return window.innerWidth < 400 ? value.substring(0, 3) : value
-                }}
-                stroke="hsl(var(--muted-foreground))"
-              />
-              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  borderColor: "hsl(var(--border))",
-                  borderRadius: "var(--radius)",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                  fontSize: "12px",
-                }}
-                formatter={(value: number) => [`${value} empréstimos`, "Total"]}
-                cursor={{ fill: "hsl(var(--muted))", opacity: 0.1 }}
-              />
-              <Bar 
-                dataKey="emprestimos" 
-                fill="url(#barGradient)" 
-                radius={[4, 4, 0, 0]} 
-                name="Empréstimos"
-                animationDuration={1500}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+        </div>
+        <CardDescription className="text-base mt-1">
+          Número total de empréstimos realizados por mês
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="h-[350px]">
+          {loading ? (
+            <div className="flex h-full w-full items-center justify-center">
+              <Skeleton className="h-32 w-32 rounded-full" />
+            </div>
+          ) : mounted ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={simplifiedData} 
+                margin={{ top: 30, right: 30, left: 20, bottom: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccc" />
+                <XAxis 
+                  dataKey="name"
+                  tick={{ fontSize: fontSize, fontWeight: 'bold' }}
+                  tickLine={{ stroke: '#333', strokeWidth: 2 }}
+                  axisLine={{ stroke: '#333', strokeWidth: 2 }}
+                  dy={10}
+                />
+                <YAxis 
+                  tick={{ fontSize: fontSize, fontWeight: 'bold' }}
+                  tickLine={{ stroke: '#333', strokeWidth: 2 }}
+                  axisLine={{ stroke: '#333', strokeWidth: 2 }}
+                  width={40}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "2px solid #333",
+                    borderRadius: "8px",
+                    fontSize: `${fontSize}px`,
+                    fontWeight: "bold",
+                    padding: "10px"
+                  }}
+                  formatter={(value: number) => [`${value} empréstimos`, "Total"]}
+                  labelStyle={{ fontWeight: "bold", marginBottom: "5px" }}
+                />
+                <Bar
+                  dataKey="emprestimos"
+                  fill="#4f46e5"
+                  radius={[8, 8, 0, 0]}
+                  barSize={50}
+                >
+                  <LabelList 
+                    dataKey="emprestimos" 
+                    position="top" 
+                    fill="#333" 
+                    fontSize={fontSize} 
+                    fontWeight="bold"
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : null}
+        </div>
+        
+        {/* Legenda simplificada */}
+        <div className="mt-4 flex justify-center">
+          <div className="flex items-center">
+            <div className="h-4 w-8 bg-[#4f46e5] rounded mr-2"></div>
+            <span className="text-base font-medium">Empréstimos mensais</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

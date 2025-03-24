@@ -263,6 +263,14 @@ export async function extendLoanDueDate(loanId: string, formData: FormData) {
     throw new Error("Falha ao estender o prazo do empréstimo: " + (updateError.message || "Detalhes indisponíveis"));
   }
 
+  // Enviar email de atualização da data de devolução
+  try {
+    await sendEmail(loanId, "updateLoan");
+    console.log(`Email de atualização enviado para o empréstimo ${loanId}`);
+  } catch (emailError) {
+    console.error("Erro ao enviar email de atualização:", emailError);
+  }
+
   revalidatePath("/admin/loans");
   return { success: true, message: "Prazo estendido com sucesso!" };
 }

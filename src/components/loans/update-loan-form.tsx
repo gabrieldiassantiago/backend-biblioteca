@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Check, Loader2, X } from 'lucide-react';
+import {  Check, Loader2, X, Clock, ArrowRight } from 'lucide-react';
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { updateLoanStatus, extendLoanDueDate } from "../../app/(admin)/admin/loans/actions";
@@ -12,10 +12,11 @@ import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-function SubmitButton({ children, variant = "ghost", className }: { 
+function SubmitButton({ children, variant = "ghost", className, icon }: { 
   children: React.ReactNode; 
   variant?: "ghost" | "destructive" | "success"; 
   className?: string;
+  icon?: React.ReactNode;
 }) {
   const { pending } = useFormStatus();
   
@@ -29,7 +30,7 @@ function SubmitButton({ children, variant = "ghost", className }: {
     <Button 
       type="submit" 
       className={cn(
-        "w-full text-left px-3 py-2 justify-start font-medium transition-all",
+        "w-full text-left px-3 py-2.5 justify-start font-medium transition-all",
         variantClasses[variant],
         className
       )} 
@@ -41,7 +42,12 @@ function SubmitButton({ children, variant = "ghost", className }: {
           <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
           Processando...
         </span>
-      ) : children}
+      ) : (
+        <>
+          {icon || null}
+          {children}
+        </>
+      )}
     </Button>
   );
 }
@@ -107,16 +113,22 @@ export function UpdateLoanForm({
     switch (currentStatus) {
       case "pending":
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             <form action={handleStatusSubmit.bind(null, "active")}>
-              <SubmitButton variant="success" className="rounded-md">
-                <Check className="mr-2 h-4 w-4" />
+              <SubmitButton 
+                variant="success" 
+                className="rounded-md hover:translate-x-0.5 transition-transform" 
+                icon={<Check className="mr-2 h-4 w-4" />}
+              >
                 Aceitar
               </SubmitButton>
             </form>
             <form action={handleStatusSubmit.bind(null, "rejected")}>
-              <SubmitButton variant="destructive" className="rounded-md">
-                <X className="mr-2 h-4 w-4" />
+              <SubmitButton 
+                variant="destructive" 
+                className="rounded-md hover:translate-x-0.5 transition-transform"
+                icon={<X className="mr-2 h-4 w-4" />}
+              >
                 Rejeitar
               </SubmitButton>
             </form>
@@ -125,10 +137,13 @@ export function UpdateLoanForm({
       case "active":
       case "overdue":
         return (
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             <form action={handleStatusSubmit.bind(null, "returned")}>
-              <SubmitButton variant="success" className="rounded-md">
-                <Check className="mr-2 h-4 w-4" />
+              <SubmitButton 
+                variant="success" 
+                className="rounded-md hover:translate-x-0.5 transition-transform"
+                icon={<Check className="mr-2 h-4 w-4" />}
+              >
                 Marcar como Devolvido
               </SubmitButton>
             </form>
@@ -137,16 +152,17 @@ export function UpdateLoanForm({
                 <PopoverTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start px-3 py-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-md"
+                    className="w-full justify-start px-3 py-2.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-md hover:translate-x-0.5 transition-transform"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <Clock className="mr-2 h-4 w-4" />
                     <span>Estender prazo</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-white border border-gray-200 shadow-lg rounded-lg" align="start">
-                  <div className="p-3">
-                    <div className="mb-2 text-sm font-medium text-gray-700">
-                      Data atual: {format(new Date(currentDueDate), "dd/MM/yyyy", { locale: ptBR })}
+                  <div className="p-4">
+                    <div className="mb-3 text-sm font-medium flex items-center justify-between">
+                      <span className="text-gray-700">Data atual:</span>
+                      <span className="font-semibold text-blue-600">{format(new Date(currentDueDate), "dd/MM/yyyy", { locale: ptBR })}</span>
                     </div>
                     <Calendar
                       mode="single"
@@ -160,11 +176,17 @@ export function UpdateLoanForm({
                       }}
                       className="rounded-md border border-gray-200"
                     />
-                    <form action={handleExtendSubmit} className="mt-3">
+                    <form action={handleExtendSubmit} className="mt-4">
                       <input type="hidden" name="dueDate" value={date ? format(date, "yyyy-MM-dd") : ""} />
+                      <div className="flex items-center justify-between mb-3 text-sm">
+                        <span className="text-gray-700">Nova data:</span>
+                        <span className="font-semibold text-green-600">
+                          {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
+                        </span>
+                      </div>
                       <Button 
                         type="submit" 
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white transition-all" 
                         disabled={!date || isSubmitting}
                       >
                         {isSubmitting ? (
@@ -172,7 +194,12 @@ export function UpdateLoanForm({
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Salvando...
                           </span>
-                        ) : "Confirmar nova data"}
+                        ) : (
+                          <span className="flex items-center justify-center">
+                            <ArrowRight className="mr-2 h-4 w-4" />
+                            Confirmar nova data
+                          </span>
+                        )}
                       </Button>
                     </form>
                   </div>
@@ -184,7 +211,7 @@ export function UpdateLoanForm({
       case "rejected":
       case "returned":
         return (
-          <div className="text-gray-500 text-sm px-3 py-2 italic">
+          <div className="text-gray-500 text-sm px-3 py-2.5 italic">
             Nenhuma ação disponível
           </div>
         );
@@ -194,9 +221,14 @@ export function UpdateLoanForm({
   };
 
   return (
-    <div className="flex flex-col min-w-[200px]">
+    <div className="flex flex-col min-w-[220px]">
       {error && (
-        <div className="text-red-500 text-xs px-3 py-2 bg-red-50 rounded-md mb-2">{error}</div>
+        <div className="text-red-500 text-xs px-3 py-2 bg-red-50 rounded-md mb-2 border border-red-100">
+          <div className="flex items-center">
+            <X className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        </div>
       )}
       {renderOptions()}
     </div>
