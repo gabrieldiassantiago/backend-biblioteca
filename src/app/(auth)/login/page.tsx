@@ -55,8 +55,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(to_bottom,transparent,white)]"></div>
         <div className="relative z-10 text-center px-8 max-w-md">
           <div className="mb-8">
-            <div className="p-6 rounded-2xl backdrop-blur-sm mb-6 inline-block">
-              <Image src="/logounisal.svg" alt="Logo UNISAL" width={500} height={500} className="" />
+            <div className=" rounded-2xl backdrop-blur-sm mb-6 inline-block">
+              <Image  src="/logounisal.svg" color='white' alt="Logo UNISAL" width={400} height={250} className="invert-0" />
             </div>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-2xl shadow-sm">
           <div className="text-center space-y-2">
-            <div className="flex justify-center lg:hidden mb-4">
+            <div className="flex justify-center items-center lg:hidden mb-4">
               <Image src="/logounisal.svg" alt="Logo UNISAL" width={150} height={50} />
             </div>
             <h2 className="text-2xl font-semibold text-gray-800">Bem-vindo de volta</h2>
