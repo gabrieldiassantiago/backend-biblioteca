@@ -1,16 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {  Check, Loader2, X, Clock, ArrowRight } from 'lucide-react';
+import { Check, Loader2, X, Clock, ArrowRight } from 'lucide-react';
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { updateLoanStatus, extendLoanDueDate } from "../../app/(admin)/admin/loans/actions";
 import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+// Success Alert Component
+const SuccessAlert = ({ message, onClose } : { message: string, onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, [onClose]);
+  
+  return (
+    <div className="absolute top-0 right-0 z-50 max-w-md transform transition-all duration-300 ease-in-out animate-fade-in">
+      <div className="bg-white border-l-4 border-green-500 rounded-md shadow-lg p-4">
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <Check className="h-5 w-5 text-green-500" />
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium text-green-800">{message}</p>
+          </div>
+          <div className="ml-auto pl-3">
+            <div className="-mx-1.5 -my-1.5">
+              <button
+                onClick={onClose}
+                className="inline-flex rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
+              >
+                <span className="sr-only">Fechar</span>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="mt-2">
+          <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-green-500 rounded-full animate-shrink origin-right"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 function SubmitButton({ children, variant = "ghost", className, icon }: { 
   children: React.ReactNode; 
@@ -65,6 +108,15 @@ export function UpdateLoanForm({
   const [date, setDate] = useState<Date | undefined>(currentDueDate ? new Date(currentDueDate) : undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successAlert, setSuccessAlert] = useState<{ show: boolean, message: string }>({ show: false, message: "" });
+
+  const showSuccessAlert = (message: string) => {
+    setSuccessAlert({ show: true, message });
+  };
+
+  const hideSuccessAlert = () => {
+    setSuccessAlert({ show: false, message: "" });
+  };
 
   const handleExtendSubmit = async (formData: FormData) => {
     try {
@@ -73,6 +125,7 @@ export function UpdateLoanForm({
       await extendLoanDueDate(loanId, formData);
       setShowCalendar(false);
       toast.success("Prazo estendido com sucesso!");
+      showSuccessAlert("Prazo estendido com sucesso!");
     } catch (error) {
       console.error("Erro ao estender prazo:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao estender prazo");
@@ -87,7 +140,9 @@ export function UpdateLoanForm({
       setIsSubmitting(true);
       setError(null);
       await updateLoanStatus(loanId, newStatus);
-      toast.success(`Status atualizado para ${getStatusLabel(newStatus)}`);
+      const statusMessage = `Status atualizado para ${getStatusLabel(newStatus)}`;
+      toast.success(statusMessage);
+      showSuccessAlert(statusMessage);
     } catch (error) {
       console.error(`Erro ao atualizar status para ${newStatus}:`, error);
       toast.error(error instanceof Error ? error.message : `Erro ao atualizar status para ${newStatus}`);
@@ -222,6 +277,13 @@ export function UpdateLoanForm({
 
   return (
     <div className="flex flex-col min-w-[220px]">
+      {successAlert.show && (
+        <SuccessAlert 
+          message={successAlert.message} 
+          onClose={hideSuccessAlert} 
+        />
+      )}
+      
       {error && (
         <div className="text-red-500 text-xs px-3 py-2 bg-red-50 rounded-md mb-2 border border-red-100">
           <div className="flex items-center">

@@ -162,6 +162,23 @@ export async function handleBorrow(formData: FormData) {
 
   console.log("Dados para empréstimo:", { bookId, libraryId, slug, userId });
 
+  // Verificar se o usuário tem permissão para realizar empréstimos (apenas admin)
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (userError || !userData) {
+    console.error("Erro ao buscar usuário:", userError?.message);
+    throw new Error("Erro ao buscar usuário.");
+  }
+
+  if (userData.role !== "admin") {
+    console.error("Usuário não autorizado para empréstimos:", userData.role);
+    throw new Error("Você não possui autorização para realizar empréstimos.");
+  }
+
   // Verificar se o usuário já tem um empréstimo "active"
   const { data: activeLoan, error: activeLoanError } = await supabase
     .from("loans")
@@ -210,7 +227,11 @@ export async function handleBorrow(formData: FormData) {
   console.log("Dados do empréstimo a serem inseridos:", loanData);
 
   // Inserir o empréstimo e obter o id
-  const { data: loan, error: loanInsertError } = await supabase.from("loans").insert(loanData).select("id").single();
+  const { data: loan, error: loanInsertError } = await supabase
+    .from("loans")
+    .insert(loanData)
+    .select("id")
+    .single();
 
   if (loanInsertError) {
     console.error("Erro ao criar empréstimo:", loanInsertError.message);
@@ -218,7 +239,7 @@ export async function handleBorrow(formData: FormData) {
   }
   console.log("Empréstimo criado com sucesso");
 
-  // Agora, enviar o e-mail
+  // Enviar o e-mail de notificação
   await sendEmail(loan.id, "newLoan");
 
   return { success: true, message: "Empréstimo realizado com sucesso!" };
