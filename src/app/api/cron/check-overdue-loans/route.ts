@@ -1,5 +1,5 @@
-// /api/cron/check-overdue-loans.ts
-import { NextApiRequest, NextApiResponse } from 'next';
+// app/api/cron/check-overdue-loans/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from '@/app/lib/email-service';
 
@@ -8,21 +8,10 @@ interface OverdueLoan {
   id: string;
 }
 
-interface ResponseData {
-  success: boolean;
-  processed: number;
-  errors: number;
-  total: number;
-}
-
-export default async function handler(
-  req: NextApiRequest, 
-  res: NextApiResponse<ResponseData | { error: string }>
-): Promise<void> {
+export async function POST(request: NextRequest) {
   // Verificar se a requisição veio do sistema de cron do Vercel
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
-    res.status(401).json({ error: 'Não autorizado' });
-    return;
+  if (request.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
   try {
@@ -39,8 +28,7 @@ export default async function handler(
 
     if (error) {
       console.error("Erro ao buscar empréstimos atrasados:", error);
-      res.status(500).json({ error: 'Falha ao buscar empréstimos' });
-      return;
+      return NextResponse.json({ error: 'Falha ao buscar empréstimos' }, { status: 500 });
     }
 
     const loans = overdueLoans as OverdueLoan[];
@@ -73,7 +61,7 @@ export default async function handler(
       }
     }
 
-    res.status(200).json({
+    return NextResponse.json({
       success: true,
       processed: processedCount,
       errors: errorCount,
@@ -81,6 +69,12 @@ export default async function handler(
     });
   } catch (error) {
     console.error("Erro geral na verificação de empréstimos:", error);
-    res.status(500).json({ error: 'Falha interna do servidor' });
+    return NextResponse.json({ error: 'Falha interna do servidor' }, { status: 500 });
   }
+}
+
+// Também podemos permitir a execução via GET para testes
+export async function GET(request: NextRequest) {
+  // Reutilizar a mesma lógica de autorização
+  return POST(request);
 }
