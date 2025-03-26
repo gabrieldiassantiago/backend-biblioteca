@@ -172,52 +172,32 @@ interface DashboardStats {
   visitsTrend: number;
 }
 
-// Função para obter estatísticas do dashboard
 export const getDashboardStats = cache(async (): Promise<DashboardStats> => {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
 
-  const today = new Date();
-  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-
   try {
-    const [
-      { count: totalBooks },
-      { count: newBooks },
-      { count: lastMonthBooks },
-      { count: activeUsers },
-      { count: newUsers },
-      { count: lastMonthUsers },
-      { count: activeLoans },
-      { count: newLoans },
-      { count: lastMonthLoans },
-    ] = await Promise.all([
-      supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
-      supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
-      supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
-      supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
-      supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
-      supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
-      supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
-      supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
-      supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
-    ]);
-
-    const booksTrend = calculateTrend(newBooks || 0, lastMonthBooks || 0);
-    const usersTrend = calculateTrend(newUsers || 0, lastMonthUsers || 0);
-    const loansTrend = calculateTrend(newLoans || 0, lastMonthLoans || 0);
-
+    const { data, error } = await supabase.rpc('get_dashboard_stats', { 
+      library_id: libraryId 
+    });
+    
+    if (error) throw error;
+    
+    const booksTrend = calculateTrend(data.newBooks || 0, data.lastMonthBooks || 0);
+    const usersTrend = calculateTrend(data.newUsers || 0, data.lastMonthUsers || 0);
+    const loansTrend = calculateTrend(data.newLoans || 0, data.lastMonthLoans || 0);
+    
+    // Simulação de visitas (como no código original)
     const monthlyVisits = Math.floor(Math.random() * 10000);
     const lastMonthVisits = Math.floor(Math.random() * 9000) + 4000;
     const visitsTrend = calculateTrend(monthlyVisits, lastMonthVisits);
-
+    
     return {
-      totalBooks: totalBooks || 0,
+      totalBooks: data.totalBooks || 0,
       booksTrend,
-      activeUsers: activeUsers || 0,
+      activeUsers: data.activeUsers || 0,
       usersTrend,
-      activeLoans: activeLoans || 0,
+      activeLoans: data.activeLoans || 0,
       loansTrend,
       monthlyVisits,
       visitsTrend,
