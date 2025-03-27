@@ -6,10 +6,10 @@ import { sendEmail } from '@/app/lib/email-service';
 // Definição dos tipos
 interface OverdueLoan {
   id: string;
+  status: string;
 }
 
 export async function POST(request: NextRequest) {
-  // Verificar se a requisição veio do sistema de cron do Vercel
   if (request.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const today = new Date().toISOString().split('T')[0];
 
-    // Buscar empréstimos ativos com data de devolução anterior à data atual
+    // Buscar empréstimos ativos OU já atrasados com data de devolução anterior à data atual
     const { data: overdueLoans, error } = await supabase
       .from("loans")
-      .select("id")
-      .eq("status", "active")
+      .select("id, status")
+      .in("status", ["active", "overdue"])  // Incluir tanto ativos quanto atrasados
       .lt("due_date", today)
       .is("returned_at", null);
 
@@ -33,28 +33,34 @@ export async function POST(request: NextRequest) {
 
     const loans = overdueLoans as OverdueLoan[];
     let processedCount = 0;
+    let emailCount = 0;
+    let statusUpdateCount = 0;
     let errorCount = 0;
 
     // Atualizar status e enviar emails
     for (const loan of loans) {
       try {
-        // Atualizar status para "overdue"
-        const { error: updateError } = await supabase
-          .from("loans")
-          .update({ status: "overdue" })
-          .eq("id", loan.id);
+        // Atualizar status para "overdue" apenas se ainda estiver "active"
+        if (loan.status === "active") {
+          const { error: updateError } = await supabase
+            .from("loans")
+            .update({ status: "overdue" })
+            .eq("id", loan.id);
 
-        if (updateError) {
-          console.error(`Erro ao atualizar empréstimo ${loan.id}:`, updateError);
-          errorCount++;
-          continue;
+          if (updateError) {
+            console.error(`Erro ao atualizar empréstimo ${loan.id}:`, updateError);
+            errorCount++;
+            continue;
+          }
+          statusUpdateCount++;
         }
 
-        // Enviar email de notificação
+        // Enviar email de notificação em todos os casos
         await sendEmail(loan.id, "overdueLoan");
+        emailCount++;
         processedCount++;
         
-        console.log(`Empréstimo ${loan.id} marcado como atrasado e email enviado`);
+        console.log(`Empréstimo ${loan.id} processado: ${loan.status === 'active' ? 'status atualizado e ' : ''}email enviado`);
       } catch (err) {
         console.error(`Erro ao processar empréstimo ${loan.id}:`, err);
         errorCount++;
@@ -64,6 +70,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       processed: processedCount,
+      statusUpdates: statusUpdateCount,
+      emailsSent: emailCount,
       errors: errorCount,
       total: loans.length
     });
