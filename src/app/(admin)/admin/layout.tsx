@@ -3,12 +3,11 @@ import { Inter } from 'next/font/google'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Home, Book, BookOpen, LogOut, User, Library, ChevronRight, BookMarked } from 'lucide-react'
+import { Menu, Home, Book, BookOpen, LogOut, User, Library, ChevronRight, BookMarked, MessageCircle } from 'lucide-react'
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@radix-ui/react-dropdown-menu"
-import { LibraryChatbot } from "@/components/chatbot/chat-interface"
 import { redirect } from "next/navigation"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -53,12 +52,13 @@ export default async function AdminLayout({
     { href: "/admin/books", icon: Book, label: "Gerenciar Livros", description: "Adicionar, editar e remover livros" },
     { href: "/admin/loans", icon: BookOpen, label: "Empréstimos", description: "Gerenciar empréstimos e devoluções" },
     { href: "/admin/users", icon: User, label: "Alunos", description: "Gerenciar cadastros de alunos" },
+    { href: "/admin/chat", icon: MessageCircle, label: "Chat IA", description: "Use IA para automatizar suas tarefas" },
+
   ]
 
   return (
     <div className={`${inter.className} antialiased bg-background flex flex-col min-h-screen`}>
       {/* Mobile Header */}
-      <LibraryChatbot />
       <header className="lg:hidden flex items-center justify-between p-4 bg-card border-b shadow-sm">
         <Sheet>
           <SheetTrigger asChild>

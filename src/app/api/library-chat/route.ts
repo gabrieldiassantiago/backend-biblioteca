@@ -289,6 +289,7 @@ async function createLoan(
     if (updateError) {
       return { success: false, message: `Erro ao atualizar disponibilidade do livro: ${updateError.message}` };
     }
+    
 
     return {
       success: true,
@@ -495,6 +496,7 @@ O livro foi registrado como emprestado e sua disponibilidade foi atualizada no s
               },
               required: ["bookId", "userId"],
             },
+           
           },
           {
             name: "checkLoans",
