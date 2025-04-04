@@ -1,8 +1,10 @@
 "use client"
 
 import type React from "react"
+
 import { useEffect, useState } from "react"
-import { Book, Users, BookOpen, Library, Sparkles } from "lucide-react"
+import { Book, Users, BookOpen, Library, TrendingUp } from "lucide-react"
+import { motion } from "framer-motion"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { BookLoanChart } from "@/components/dashboard/book-loan-chart"
@@ -74,11 +76,11 @@ export default function AdminDashboardPage() {
       // Atualizar com cores mais vibrantes para o gráfico de status
       const updatedLoanStatus = data.loanStatus.map((status, index) => {
         const colors = [
-          "#4f46e5", // indigo
-          "#10b981", // emerald
-          "#ef4444", // red
-          "#f59e0b", // amber
-          "#6366f1", // indigo lighter
+          "#4338ca", // indigo-700
+          "#059669", // emerald-600
+          "#e11d48", // rose-600
+          "#d97706", // amber-600
+          "#7c3aed", // violet-600
         ]
         return {
           ...status,
@@ -123,52 +125,89 @@ export default function AdminDashboardPage() {
     fetchDashboardData()
   }, [])
 
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
+
+  const item = {
+    hidden: { y: 20, opacity: 0 },
+    show: { y: 0, opacity: 1 },
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto space-y-8 p-4 md:p-8">
-        {/* Header com design simplificado */}
-        <div className="dashboard-header">
-          <div className="border-2 rounded-xl bg-white p-6">
-            <div className="flex items-center gap-4">
-              <div className="rounded-full bg-primary/10 p-3">
-                <Library className="h-8 w-8 text-primary" />
+    <div className="min-h-screen ">
+      <motion.div
+        className="mx-auto space-y-6 p-4 md:p-8 max-w-7xl"
+        initial="hidden"
+        animate="show"
+        variants={container}
+      >
+        {/* Header com design sutil e integrado */}
+        <motion.div variants={item} className="dashboard-header">
+          <div className="rounded-lg bg-white p-4 shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="flex items-center gap-2 text-gray-700">
+                <Library className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm font-medium">Biblioteca:</span>
               </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center gap-2">
-                  {loading ? (
-                    <Skeleton className="h-10 w-48" />
-                  ) : (
-                    <>
-                      <span>{libraryName}</span>
-                      <Sparkles className="h-5 w-5 text-yellow-500" />
-                    </>
-                  )}
-                </h1>
-                <p className="text-gray-600 mt-1 text-lg">Visão geral da sua biblioteca e atividades recentes</p>
+              <div className="ml-2">
+                {loading ? (
+                  <Skeleton className="h-5 w-32" />
+                ) : (
+                  <span className="text-base text-gray-800">{libraryName}</span>
+                )}
+              </div>
+              <div className="ml-auto flex items-center gap-3">
+                <div className="text-xs text-gray-500 hidden md:block">
+                  Última atualização: {new Date().toLocaleDateString()}
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-gray-50 hover:bg-gray-100 rounded-md px-3 py-1.5 flex items-center gap-1.5 text-xs text-gray-700 font-medium border border-gray-200 transition-colors"
+                >
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span>Atualizar dados</span>
+                </motion.button>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Estatísticas */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {stats.map((stat, index) => (
-            <StatCard key={index} stat={stat} loading={loading} index={index} />
+            <motion.div key={index} variants={item}>
+              <StatCard stat={stat} loading={loading} index={index} />
+            </motion.div>
           ))}
         </div>
 
         {/* Gráficos */}
         <div className="grid gap-6 md:grid-cols-2">
-          <BookLoanChart data={monthlyLoans} loading={loading} />
-          <LoanStatusChart data={loanStatus} loading={loading} />
+          <motion.div variants={item}>
+            <BookLoanChart data={monthlyLoans} loading={loading} />
+          </motion.div>
+          <motion.div variants={item}>
+            <LoanStatusChart data={loanStatus} loading={loading} />
+          </motion.div>
         </div>
 
         {/* Tabelas */}
         <div className="grid gap-6 md:grid-cols-2">
-          <RecentLoansTable loans={recentLoans} loading={loading} />
-          <PopularBooksTable books={popularBooks} loading={loading} />
+          <motion.div variants={item}>
+            <RecentLoansTable loans={recentLoans} loading={loading} />
+          </motion.div>
+          <motion.div variants={item}>
+            <PopularBooksTable books={popularBooks} loading={loading} />
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

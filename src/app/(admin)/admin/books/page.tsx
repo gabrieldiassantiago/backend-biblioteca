@@ -26,7 +26,7 @@ export default async function BooksPage({
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <form>
             <Input 
-              placeholder="Buscar livros..." 
+              placeholder="Busque por livros, autor etc..." 
               name="search"
               defaultValue={search}
               className="pl-10"

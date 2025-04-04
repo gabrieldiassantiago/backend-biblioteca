@@ -33,7 +33,6 @@ async function getUserLibraryId() {
   return userData.library_id
 }
 
-// Interfaces atualizadas
 interface Book {
   title: string
 }

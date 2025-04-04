@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
-import { PieChartIcon } from "lucide-react"
+import { PieChartIcon, MoreVertical } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface LoanStatusData {
   name: string
@@ -15,7 +16,7 @@ interface LoanStatusData {
 export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loading: boolean }) {
   const [mounted, setMounted] = useState(false)
   const [chartSize, setChartSize] = useState({
-    innerRadius: 0, // Mudado para 0 para criar um gráfico de pizza sólido
+    innerRadius: 60,
     outerRadius: 110,
     fontSize: 16,
   })
@@ -25,11 +26,11 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
     const handleResize = () => {
       const width = window.innerWidth
       if (width < 400) {
-        setChartSize({ innerRadius: 0, outerRadius: 70, fontSize: 14 })
+        setChartSize({ innerRadius: 40, outerRadius: 70, fontSize: 14 })
       } else if (width < 768) {
-        setChartSize({ innerRadius: 0, outerRadius: 90, fontSize: 15 })
+        setChartSize({ innerRadius: 50, outerRadius: 90, fontSize: 15 })
       } else {
-        setChartSize({ innerRadius: 0, outerRadius: 110, fontSize: 16 })
+        setChartSize({ innerRadius: 60, outerRadius: 110, fontSize: 16 })
       }
     }
 
@@ -38,11 +39,8 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  // Cores mais distintas e contrastantes
-  const COLORS = ["#4f46e5", "#10b981", "#ef4444", "#f59e0b", "#6366f1"]
-
   // Traduzir os nomes para português no gráfico
-  const translatedData = data.map((entry, index) => ({
+  const translatedData = data.map((entry) => ({
     ...entry,
     name:
       entry.name === "Ativos"
@@ -56,18 +54,17 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
               : entry.name === "Rejeitados"
                 ? "Rejeitados"
                 : entry.name,
-    color: COLORS[index % COLORS.length],
   }))
 
   // Renderizar a legenda personalizada para maior clareza
   const renderCustomLegend = () => {
     return (
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-4">
         {translatedData.map((entry, index) => (
           <div key={`legend-${index}`} className="flex items-center">
-            <div className="h-5 w-5 mr-2" style={{ backgroundColor: entry.color, borderRadius: "4px" }} />
-            <span className="text-base font-medium">
-              {entry.name}: {entry.value}
+            <div className="h-4 w-4 mr-2 rounded-sm" style={{ backgroundColor: entry.color }} />
+            <span className="text-sm text-gray-700">
+              {entry.name}: <span className="font-medium">{entry.value}</span>
             </span>
           </div>
         ))}
@@ -76,15 +73,34 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
   }
 
   return (
-    <Card className="border-2">
+    <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <PieChartIcon className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl font-bold">Status dos Empréstimos</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-indigo-100 p-2">
+              <PieChartIcon className="h-5 w-5 text-indigo-700" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold text-gray-800">Status dos Empréstimos</CardTitle>
+              <CardDescription className="text-xs text-gray-500 mt-0.5">
+                Distribuição dos empréstimos por status
+              </CardDescription>
+            </div>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                <MoreVertical className="h-4 w-4 text-gray-500" />
+                <span className="sr-only">Menu de opções</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Exportar como PNG</DropdownMenuItem>
+              <DropdownMenuItem>Exportar como CSV</DropdownMenuItem>
+              <DropdownMenuItem>Ver em tela cheia</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <CardDescription className="text-base mt-1">Distribuição dos empréstimos por status</CardDescription>
       </CardHeader>
       <CardContent className="pt-4">
         <div className="h-[300px]">
@@ -105,7 +121,7 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
                   cy="50%"
                   innerRadius={chartSize.innerRadius}
                   outerRadius={chartSize.outerRadius}
-                  paddingAngle={2}
+                  paddingAngle={4}
                   dataKey="value"
                   label={({ percent }) => (percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : "")}
                   labelLine={false}
@@ -121,11 +137,11 @@ export function LoanStatusChart({ data, loading }: { data: LoanStatusData[]; loa
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "white",
-                    border: "2px solid #333",
+                    border: "1px solid #e5e7eb",
                     borderRadius: "8px",
                     fontSize: `${chartSize.fontSize}px`,
-                    fontWeight: "bold",
                     padding: "10px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                   }}
                   formatter={(value: number, name: string) => [`${value} empréstimos`, name]}
                 />

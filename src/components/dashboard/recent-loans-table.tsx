@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useState, useEffect } from "react"
-import { ClipboardList, BookOpen, User } from 'lucide-react'
+import { ClipboardList, BookOpen, User, Calendar, Clock, MoreVertical } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface RecentLoan {
   id: string
@@ -36,35 +37,15 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return (
-          <Badge className="bg-emerald-500 text-white text-sm font-bold px-3 py-1">
-            Ativo
-          </Badge>
-        )
+        return <Badge className="bg-emerald-600 text-white text-xs font-medium px-2 py-0.5 border-0">Ativo</Badge>
       case "returned":
-        return (
-          <Badge className="bg-blue-500 text-white text-sm font-bold px-3 py-1">
-            Devolvido
-          </Badge>
-        )
+        return <Badge className="bg-blue-600 text-white text-xs font-medium px-2 py-0.5 border-0">Devolvido</Badge>
       case "overdue":
-        return (
-          <Badge className="bg-rose-500 text-white text-sm font-bold px-3 py-1">
-            Atrasado
-          </Badge>
-        )
+        return <Badge className="bg-rose-600 text-white text-xs font-medium px-2 py-0.5 border-0">Atrasado</Badge>
       case "pending":
-        return (
-          <Badge className="bg-amber-500 text-white text-sm font-bold px-3 py-1">
-            Pendente
-          </Badge>
-        )
+        return <Badge className="bg-amber-600 text-white text-xs font-medium px-2 py-0.5 border-0">Pendente</Badge>
       case "rejected":
-        return (
-          <Badge className="bg-slate-500 text-white text-sm font-bold px-3 py-1">
-            Rejeitado
-          </Badge>
-        )
+        return <Badge className="bg-slate-600 text-white text-xs font-medium px-2 py-0.5 border-0">Rejeitado</Badge>
       default:
         return <Badge>Desconhecido</Badge>
     }
@@ -75,7 +56,7 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
       return (
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
-            <Card key={i} className="p-4 border border-border">
+            <Card key={i} className="p-4 border border-gray-200 shadow-sm">
               <Skeleton className="h-6 w-3/4 mb-4" />
               <div className="grid grid-cols-2 gap-2">
                 <Skeleton className="h-4 w-full" />
@@ -94,23 +75,49 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
     return (
       <div className="space-y-4">
         {loans.map((loan) => (
-          <Card 
-            key={loan.id} 
-            className="p-4 border-2"
+          <Card
+            key={loan.id}
+            className="p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
           >
-            <div className="font-medium text-lg mb-2 flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-primary" />
-              {loan.book}
+            <div className="flex justify-between items-start mb-3">
+              <div className="font-medium text-base flex items-center gap-2 text-gray-800">
+                <BookOpen className="h-4 w-4 text-indigo-700" />
+                {loan.book}
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                    <MoreVertical className="h-4 w-4 text-gray-500" />
+                    <span className="sr-only">Menu de opções</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                  <DropdownMenuItem>Renovar empréstimo</DropdownMenuItem>
+                  <DropdownMenuItem>Marcar como devolvido</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-base">
-              <div className="font-medium">Usuário:</div>
-              <div>{loan.user}</div>
-              <div className="font-medium">Data:</div>
-              <div>{formatDate(loan.date)}</div>
-              <div className="font-medium">Vencimento:</div>
-              <div>{formatDate(loan.dueDate)}</div>
-              <div className="font-medium">Status:</div>
-              <div>{getStatusBadge(loan.status)}</div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="flex items-center gap-2 text-gray-700">
+                <User className="h-4 w-4 text-indigo-600" />
+                <span className="font-medium">Usuário:</span>
+                {loan.user}
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <Calendar className="h-4 w-4 text-indigo-600" />
+                <span className="font-medium">Data:</span>
+                {formatDate(loan.date)}
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <Clock className="h-4 w-4 text-indigo-600" />
+                <span className="font-medium">Vencimento:</span>
+                {formatDate(loan.dueDate)}
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <span className="font-medium">Status:</span>
+                {getStatusBadge(loan.status)}
+              </div>
             </div>
           </Card>
         ))}
@@ -136,34 +143,44 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
     }
 
     return (
-      <div className="rounded-md border-2">
+      <div className="rounded-md border border-gray-200 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/30">
+          <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="text-base font-bold">Livro</TableHead>
-              <TableHead className="text-base font-bold">Usuário</TableHead>
-              <TableHead className="text-base font-bold">Data</TableHead>
-              <TableHead className="text-base font-bold">Vencimento</TableHead>
-              <TableHead className="text-base font-bold">Status</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Livro</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Usuário</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Data</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Vencimento</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Status</TableHead>
+              <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loans.map((loan) => (
-              <TableRow 
-                key={loan.id} 
-                className="hover:bg-muted/30"
-              >
-                <TableCell className="font-medium text-base flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-primary" />
+              <TableRow key={loan.id} className="hover:bg-gray-50 transition-colors duration-150">
+                <TableCell className="font-medium text-sm flex items-center gap-2 text-gray-800">
+                  <BookOpen className="h-4 w-4 text-indigo-600" />
                   {loan.book}
                 </TableCell>
-                <TableCell className="text-base flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
-                  {loan.user}
-                </TableCell>
-                <TableCell className="text-base">{formatDate(loan.date)}</TableCell>
-                <TableCell className="text-base">{formatDate(loan.dueDate)}</TableCell>
+                <TableCell className="text-sm text-gray-700">{loan.user}</TableCell>
+                <TableCell className="text-sm text-gray-700">{formatDate(loan.date)}</TableCell>
+                <TableCell className="text-sm text-gray-700">{formatDate(loan.dueDate)}</TableCell>
                 <TableCell>{getStatusBadge(loan.status)}</TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                        <MoreVertical className="h-4 w-4 text-gray-500" />
+                        <span className="sr-only">Menu de opções</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                      <DropdownMenuItem>Renovar empréstimo</DropdownMenuItem>
+                      <DropdownMenuItem>Marcar como devolvido</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -173,21 +190,37 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
   }
 
   return (
-    <Card className="border-2">
+    <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl font-bold">Empréstimos Recentes</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-indigo-100 p-2">
+              <ClipboardList className="h-5 w-5 text-indigo-700" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold text-gray-800">Empréstimos Recentes</CardTitle>
+              <CardDescription className="text-xs text-gray-500 mt-0.5">
+                Os últimos 5 empréstimos registrados no sistema
+              </CardDescription>
+            </div>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                <MoreVertical className="h-4 w-4 text-gray-500" />
+                <span className="sr-only">Menu de opções</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Exportar como CSV</DropdownMenuItem>
+              <DropdownMenuItem>Ver todos os empréstimos</DropdownMenuItem>
+              <DropdownMenuItem>Atualizar dados</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <CardDescription className="text-base mt-1">
-          Os últimos 5 empréstimos registrados no sistema
-        </CardDescription>
       </CardHeader>
-      <CardContent>
-        {isMobile ? renderMobileView() : renderDesktopView()}
-      </CardContent>
+      <CardContent>{isMobile ? renderMobileView() : renderDesktopView()}</CardContent>
     </Card>
   )
 }
+

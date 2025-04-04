@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
 import { Inter } from 'next/font/google'
-import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -9,6 +8,8 @@ import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@radix-ui/react-dropdown-menu"
+import { LibraryChatbot } from "@/components/chatbot/chat-interface"
+import { redirect } from "next/navigation"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,43 +20,16 @@ export default async function AdminLayout({
 }) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    console.log("Erro na autenticação ou usuário não encontrado:", authError?.message || "Sessão ausente")
-    redirect("/login")
-  }
-
-  const roleFromMetadata = user.user_metadata?.role
-  let role = roleFromMetadata
-
-  if (!roleFromMetadata) {
-    const { data: userData, error: userError } = await supabase.from("users").select("role, name").eq("id", user.id).single()
-
-    if (userError || !userData?.role) {
-      console.log("Erro ao buscar role ou role não encontrado:", userError?.message || "Dados ausentes")
-      redirect("/login")
-    }
-    role = userData.role
-  }
-
-  if (role !== "admin") {
-    console.log("Acesso negado - Role do usuário:", role)
-    redirect("/login")
-  }
-
-  // Buscar nome do usuário
+  // Obter dados do usuário autenticado
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: userData } = await supabase
     .from("users")
     .select("name, email")
-    .eq("id", user.id)
+    .eq("id", user?.id)
     .single()
 
-  const userName = userData?.name || user.email?.split('@')[0] || 'Administrador'
-  const userEmail = userData?.email || user.email || ''
+  const userName = userData?.name || user?.email?.split('@')[0] || 'Administrador'
+  const userEmail = userData?.email || user?.email || ''
   
   // Obter iniciais para o avatar
   const getInitials = (name: string) => {
@@ -84,6 +58,7 @@ export default async function AdminLayout({
   return (
     <div className={`${inter.className} antialiased bg-background flex flex-col min-h-screen`}>
       {/* Mobile Header */}
+      <LibraryChatbot />
       <header className="lg:hidden flex items-center justify-between p-4 bg-card border-b shadow-sm">
         <Sheet>
           <SheetTrigger asChild>
@@ -106,7 +81,7 @@ export default async function AdminLayout({
             <div className="p-4 border-b bg-muted/30">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10 border-2 border-primary/20">
-                  <AvatarImage src={`https://avatar.vercel.sh/${user.id}.png`} alt={userName} />
+                  <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {getInitials(userName)}
                   </AvatarFallback>
@@ -156,7 +131,7 @@ export default async function AdminLayout({
         </Link>
         
         <Avatar className="h-8 w-8 border border-primary/20">
-          <AvatarImage src={`https://avatar.vercel.sh/${user.id}.png`} alt={userName} />
+          <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs">
             {getInitials(userName)}
           </AvatarFallback>
@@ -180,7 +155,7 @@ export default async function AdminLayout({
           <div className="p-4 border-b bg-muted/30">
             <div className="flex items-center space-x-3">
               <Avatar className="h-10 w-10 border-2 border-primary/20">
-                <AvatarImage src={`https://avatar.vercel.sh/${user.id}.png`} alt={userName} />
+                <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
                 <AvatarFallback className="bg-primary/10 text-primary">
                   {getInitials(userName)}
                 </AvatarFallback>
@@ -257,7 +232,6 @@ interface NavItemProps {
 }
 
 function NavItem({ item }: NavItemProps) {
-  // Check if the current path matches the item's href
   const isActive = typeof window !== 'undefined' ? 
     window.location.pathname === item.href || 
     (item.href !== '/admin' && window.location.pathname.startsWith(item.href)) : 
@@ -290,7 +264,6 @@ function NavItem({ item }: NavItemProps) {
 }
 
 function MobileNavItem({ item }: NavItemProps) {
-  // Check if the current path matches the item's href
   const isActive = typeof window !== 'undefined' ? 
     window.location.pathname === item.href || 
     (item.href !== '/admin' && window.location.pathname.startsWith(item.href)) : 
