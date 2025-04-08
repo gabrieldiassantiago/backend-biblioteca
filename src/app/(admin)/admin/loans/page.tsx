@@ -1,70 +1,47 @@
-"use server"
+import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal, Eye } from "lucide-react";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UpdateLoanForm } from "@/components/loans/update-loan-form";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { getUserLibraryId } from "./actions";
+import { NewLoanModal } from "./new-loan-form";
+import { PaginationControls } from "./PaginationControls";
 
-import { createClient } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal } from "lucide-react"
-import { Suspense } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { UpdateLoanForm } from "@/components/loans/update-loan-form"
-import { NewLoanModal } from "./new-loan-form"
-import { redirect } from "next/navigation"
-import { PaginationControls } from "./PaginationControls"
-
-// Função para obter o library_id do admin autenticado
-async function getUserLibraryId() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error("Usuário não autenticado")
-
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("library_id")
-    .eq("id", user.id)
-    .single()
-
-  if (userError || !userData?.library_id) throw new Error("Usuário não vinculado a uma biblioteca")
-  return userData.library_id
-}
-
-interface Book {
-  title: string
-}
-interface User {
-  full_name: string
-}
+// Interfaces
 interface RawLoan {
-  id: string
-  user_id: string
-  book_id: string
-  library_id: string
-  borrowed_at: string
-  due_date: string
-  returned_at: string | null
-  status: "pending" | "active" | "returned" | "overdue" | "rejected"
-  books: Book
-  users: User
-}
-interface Loan {
-  id: string
-  user_id: string
-  book_id: string
-  library_id: string
-  borrowed_at: string
-  due_date: string
-  returned_at: string | null
-  status: "pending" | "active" | "returned" | "overdue" | "rejected"
-  book_title: string
-  user_name: string
+  id: string;
+  user_id: string;
+  book_id: string;
+  library_id: string;
+  borrowed_at: string;
+  due_date: string;
+  returned_at: string | null;
+  status: "pending" | "active" | "returned" | "overdue" | "rejected";
+  books?: { title: string }[];
+  users?: { full_name: string }[];
 }
 
-// Componente de Skeleton
+interface FormattedLoan {
+  id: string;
+  user_id: string;
+  book_id: string;
+  library_id: string;
+  borrowed_at: string;
+  due_date: string;
+  returned_at: string | null;
+  status: "pending" | "active" | "returned" | "overdue" | "rejected";
+  book_title: string;
+  user_name: string;
+}
+
+// Skeleton
 function LoanListSkeleton() {
   return (
     <div className="rounded-md border">
@@ -82,48 +59,39 @@ function LoanListSkeleton() {
         <TableBody>
           {Array.from({ length: 5 }).map((_, index) => (
             <TableRow key={index}>
-              <TableCell>
-                <Skeleton className="h-4 w-[200px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-[150px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-[100px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-[100px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-[80px]" />
-              </TableCell>
-              <TableCell className="text-right">
-                <Skeleton className="h-8 w-8" />
-              </TableCell>
+              <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+              <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
 
-export default async function LoansPage({
-  searchParams,
-}: { searchParams: Promise<{ page?: string; status?: string }> }) {
-  const paramsObj = await searchParams
-  const page = Math.max(1, Number.parseInt(paramsObj.page || "1", 10))
-  const statusFilter = paramsObj.status || "all"
+// Tipagem ajustada pra Promise
+interface LoansPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function LoansPage({ searchParams }: LoansPageProps) {
+  // Resolve a Promise dos searchParams
+  const resolvedSearchParams = await searchParams;
+  const page = Math.max(1, Number.parseInt((resolvedSearchParams.page as string) || "1", 10));
+  const statusFilter = (resolvedSearchParams.status as string) || "all";
 
   async function handleStatusFilter(formData: FormData) {
-    "use server"
-    const status = formData.get("status") as string
-    const newParams = new URLSearchParams({ page: "1" })
+    "use server";
+    const status = formData.get("status") as string;
+    const newParams = new URLSearchParams({ page: "1" });
     if (status && status !== "all") {
-      newParams.set("status", status)
+      newParams.set("status", status);
     }
-    console.log("Redirecionando com novos parâmetros:", newParams.toString())
-    redirect(`/admin/loans?${newParams.toString()}`)
+    redirect(`/admin/loans?${newParams.toString()}`);
   }
 
   return (
@@ -145,9 +113,7 @@ export default async function LoansPage({
                 <SelectItem value="rejected">Rejeitado</SelectItem>
               </SelectContent>
             </Select>
-            <Button type="submit" variant="outline">
-              Filtrar
-            </Button>
+            <Button type="submit" variant="outline">Filtrar</Button>
           </form>
           <NewLoanModal />
         </div>
@@ -156,66 +122,108 @@ export default async function LoansPage({
         <LoansTable page={page} statusFilter={statusFilter} />
       </Suspense>
     </div>
-  )
+  );
 }
 
-// Novo componente para carregar e exibir os empréstimos
 async function LoansTable({ page, statusFilter }: { page: number; statusFilter: string }) {
-  const supabase = await createClient()
-  const libraryId = await getUserLibraryId()
-  const pageSize = 10
-  const offset = (page - 1) * pageSize
+  const supabase = await createClient();
+  const libraryId = await getUserLibraryId();
+  const pageSize = 10;
+  const offset = (page - 1) * pageSize;
 
-  console.log("Parâmetros recebidos:", { page, statusFilter })
-
-  // Contagem de empréstimos com filtro de status
-  let countQuery = supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId)
-
+  // Contagem
+  let countQuery = supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId);
   if (statusFilter !== "all") {
-    countQuery = countQuery.eq("status", statusFilter)
+    countQuery = countQuery.eq("status", statusFilter);
   }
+  const { count } = await countQuery;
 
-  const { count } = await countQuery
-  console.log("Total de empréstimos encontrados:", count)
-
-  // Busca de empréstimos com filtro de status
+  // Busca
   let loansQuery = supabase
     .from("loans")
-    .select(
-      "id, user_id, book_id, library_id, borrowed_at, due_date, returned_at, status, books (title), users (full_name)",
-    )
-    .eq("library_id", libraryId)
+    .select(`
+      id,
+      user_id,
+      book_id,
+      library_id,
+      borrowed_at,
+      due_date,
+      returned_at,
+      status,
+      books:book_id (title),
+      users:user_id (full_name)
+    `)
+    .eq("library_id", libraryId);
 
   if (statusFilter !== "all") {
-    loansQuery = loansQuery.eq("status", statusFilter)
+    loansQuery = loansQuery.eq("status", statusFilter);
   }
 
   const { data: loans, error } = await loansQuery
     .range(offset, offset + pageSize - 1)
-    .order("borrowed_at", { ascending: false })
-    .returns<RawLoan[]>()
+    .order("borrowed_at", { ascending: false });
 
   if (error) {
-    console.error("Erro ao buscar empréstimos:", error.message)
-    throw new Error("Erro ao carregar histórico de empréstimos: " + error.message)
+    console.error("Erro ao buscar empréstimos:", error.message);
+    throw new Error("Erro ao carregar histórico: " + error.message);
   }
 
-  console.log("Empréstimos retornados:", loans?.length)
+  // Log pra debug
+  console.log("Dados brutos do Supabase:", JSON.stringify(loans, null, 2));
 
-  const formattedLoans: Loan[] = (loans || []).map((loan) => ({
-    id: loan.id,
-    user_id: loan.user_id,
-    book_id: loan.book_id,
-    library_id: loan.library_id,
-    borrowed_at: loan.borrowed_at,
-    due_date: loan.due_date,
-    returned_at: loan.returned_at,
-    status: loan.status,
-    book_title: loan.books.title || "Título não encontrado",
-    user_name: loan.users.full_name || "Usuário não encontrado",
-  }))
+  const formattedLoans: FormattedLoan[] = await Promise.all(
+    (loans || []).map(async (loan: RawLoan) => {
+      let bookTitle = "Título não encontrado";
+      let userName = "Usuário não encontrado";
 
-  const totalPages = Math.ceil((count || 0) / pageSize)
+      if (loan.books && loan.books.length > 0 && loan.books[0].title) {
+        bookTitle = loan.books[0].title;
+      } else {
+        const { data: bookData, error: bookError } = await supabase
+          .from("books")
+          .select("title")
+          .eq("id", loan.book_id)
+          .single();
+
+        if (bookError) {
+          console.error(`Erro ao buscar livro ${loan.book_id}:`, bookError.message);
+        } else if (bookData) {
+          bookTitle = bookData.title;
+        }
+      }
+
+      if (loan.users && loan.users.length > 0 && loan.users[0].full_name) {
+        userName = loan.users[0].full_name;
+      } else {
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("full_name")
+          .eq("id", loan.user_id)
+          .single();
+
+        if (userError) {
+          console.error(`Erro ao buscar usuário ${loan.user_id}:`, userError.message);
+        } else if (userData) {
+          userName = userData.full_name;
+        }
+      }
+
+      return {
+        id: loan.id,
+        user_id: loan.user_id,
+        book_id: loan.book_id,
+        library_id: loan.library_id,
+        borrowed_at: loan.borrowed_at,
+        due_date: loan.due_date,
+        returned_at: loan.returned_at,
+        status: loan.status,
+        book_title: bookTitle,
+        user_name: userName,
+      };
+    })
+  );
+
+  const totalPages = Math.ceil((count || 0) / pageSize);
 
   return (
     <div className="rounded-md border">
@@ -275,6 +283,12 @@ async function LoansTable({ page, statusFilter }: { page: number; statusFilter: 
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <Link href={`/admin/loans/${loan.id}`}>
+                        <DropdownMenuItem className="cursor-pointer">
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalhes
+                        </DropdownMenuItem>
+                      </Link>
                       <UpdateLoanForm loanId={loan.id} currentStatus={loan.status} currentDueDate={loan.due_date} />
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -299,6 +313,5 @@ async function LoansTable({ page, statusFilter }: { page: number; statusFilter: 
         />
       )}
     </div>
-  )
+  );
 }
-

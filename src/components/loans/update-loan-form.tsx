@@ -11,6 +11,15 @@ import { updateLoanStatus, extendLoanDueDate } from "../../app/(admin)/admin/loa
 import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // Success Alert Component
 const SuccessAlert = ({ message, onClose } : { message: string, onClose: () => void }) => {
@@ -109,6 +118,9 @@ export function UpdateLoanForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successAlert, setSuccessAlert] = useState<{ show: boolean, message: string }>({ show: false, message: "" });
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnDate, setReturnDate] = useState<Date | undefined>(new Date());
+  const [returnObservation, setReturnObservation] = useState("");
 
   const showSuccessAlert = (message: string) => {
     setSuccessAlert({ show: true, message });
@@ -147,6 +159,31 @@ export function UpdateLoanForm({
       console.error(`Erro ao atualizar status para ${newStatus}:`, error);
       toast.error(error instanceof Error ? error.message : `Erro ao atualizar status para ${newStatus}`);
       setError(error instanceof Error ? error.message : `Erro ao atualizar status para ${newStatus}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReturnSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      // Criar FormData para enviar os dados
+      const formData = new FormData();
+      formData.append("returnDate", returnDate ? format(returnDate, "yyyy-MM-dd") : "");
+      formData.append("observation", returnObservation);
+      
+      // Chamar a função de atualização com os dados adicionais
+      await updateLoanStatus(loanId, "returned", formData);
+      
+      setShowReturnModal(false);
+      toast.success("Empréstimo marcado como devolvido com sucesso!");
+      showSuccessAlert("Empréstimo marcado como devolvido com sucesso!");
+    } catch (error) {
+      console.error("Erro ao registrar devolução:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao registrar devolução");
+      setError(error instanceof Error ? error.message : "Erro ao registrar devolução");
     } finally {
       setIsSubmitting(false);
     }
@@ -193,15 +230,14 @@ export function UpdateLoanForm({
       case "overdue":
         return (
           <div className="space-y-1">
-            <form action={handleStatusSubmit.bind(null, "returned")}>
-              <SubmitButton 
-                variant="success" 
-                className="rounded-md hover:translate-x-0.5 transition-transform"
-                icon={<Check className="mr-2 h-4 w-4" />}
-              >
-                Marcar como Devolvido
-              </SubmitButton>
-            </form>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start px-3 py-2.5 text-green-600 hover:bg-green-50 hover:text-green-700 rounded-md hover:translate-x-0.5 transition-transform"
+              onClick={() => setShowReturnModal(true)}
+            >
+              <Check className="mr-2 h-4 w-4" />
+              Marcar como Devolvido
+            </Button>
             <div className="pt-1 mt-1 border-t border-gray-100">
               <Popover open={showCalendar} onOpenChange={setShowCalendar}>
                 <PopoverTrigger asChild>
@@ -293,6 +329,79 @@ export function UpdateLoanForm({
         </div>
       )}
       {renderOptions()}
+
+      {/* Modal de devolução usando Dialog do shadcn/ui */}
+      <Dialog open={showReturnModal} onOpenChange={setShowReturnModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Registrar Devolução</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="return-date">Data de Devolução</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="return-date"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    {returnDate ? (
+                      format(returnDate, "dd/MM/yyyy", { locale: ptBR })
+                    ) : (
+                      <span>Selecione uma data</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={returnDate}
+                    onSelect={setReturnDate}
+                    initialFocus
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date > today;
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="observation">Observação</Label>
+              <Textarea
+                id="observation"
+                placeholder="Adicione uma observação sobre a devolução (opcional)"
+                value={returnObservation}
+                onChange={(e) => setReturnObservation(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReturnModal(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleReturnSubmit}
+              disabled={isSubmitting || !returnDate}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processando...
+                </span>
+              ) : (
+                "Confirmar Devolução"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -194,6 +194,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <UserEditForm student={student} />
         </TabsContent>
         
+        
         <TabsContent value="loans" className="mt-6">
           <Card>
             <CardHeader>

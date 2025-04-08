@@ -15,8 +15,13 @@ interface Message {
 export function AdminChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    setIsModalOpen(true)
+  }, [])
 
   useEffect(() => {
     setTimeout(() => {
@@ -35,8 +40,7 @@ export function AdminChatInterface() {
 
   const typeMessage = (fullContent: string, messageId: string) => {
     let currentIndex = 0
-    const typingSpeed = 15
-
+    const typingSpeed = 5
     const interval = setInterval(() => {
       if (currentIndex <= fullContent.length) {
         setMessages(prev =>
@@ -56,55 +60,23 @@ export function AdminChatInterface() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isBotLoading) return
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: input.trim(),
-      timestamp: new Date(),
-    }
-    const assistantPlaceholder: Message = {
-      id: `bot-placeholder-${Date.now()}`,
-      role: "assistant",
-      content: "",
-      isLoading: true,
-      timestamp: new Date(),
-    }
-
+    const userMessage: Message = { id: `user-${Date.now()}`, role: "user", content: input.trim(), timestamp: new Date() }
+    const assistantPlaceholder: Message = { id: `bot-placeholder-${Date.now()}`, role: "assistant", content: "", isLoading: true, timestamp: new Date() }
     setMessages(prev => [...prev, userMessage, assistantPlaceholder])
-
+    setInput("")
     try {
-      const response = await fetch("/api/library-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
-      })
-
+      const response = await fetch("/api/library-chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [...messages, userMessage] }) })
       if (!response.ok) throw new Error("Erro na API")
       const data = await response.json()
       const assistantResponse = data.content || "Desculpe, não consegui processar isso."
-
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === assistantPlaceholder.id
-            ? { ...msg, content: "", isLoading: true }
-            : msg
-        ) as Message[]
-      )
+      setMessages(prev => prev.map(msg => msg.id === assistantPlaceholder.id ? { ...msg, content: "", isLoading: true } : msg) as Message[])
       typeMessage(assistantResponse, assistantPlaceholder.id)
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error)
-      const errorMessage = `Erro:  || "Ocorreu um erro"}`
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === assistantPlaceholder.id
-            ? { ...msg, content: "", isLoading: true }
-            : msg
-        ) as Message[]
-      )
+      const errorMessage = "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente."
+      setMessages(prev => prev.map(msg => msg.id === assistantPlaceholder.id ? { ...msg, content: "", isLoading: true } : msg) as Message[])
       typeMessage(errorMessage, assistantPlaceholder.id)
     }
-    setInput("")
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -128,128 +100,131 @@ export function AdminChatInterface() {
     return content
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-gray-200 px-1 rounded">$1</code>')
+      .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-gray-800 font-mono text-xs">$1</code>')
       .replace(/\n/g, '<br>')
   }
 
+  const closeModal = () => {
+    setIsModalOpen(false)
+  }
+
   return (
-    <div className="flex flex-col h-[724px] w-full bg-white text-gray-800">
+    <div className="flex flex-col h-[724px] w-full bg-white shadow-sm rounded-lg border border-gray-100">
       {/* Header */}
-      <header className="flex items-center justify-between p-3 sm:p-4 bg-white border-b border-gray-200">
-        <h1 className="text-base sm:text-lg font-semibold text-gray-800">Chat da Biblioteca</h1>
-        <span className="text-xs sm:text-sm text-gray-500 hidden sm:block">Adminstrador da biblioteca</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleNewChat}
-            className="p-2 text-gray-500 hover:text-gray-700"
-            title="Novo chat"
-          >
-            <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5" />
+      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-lg">
+        <h1 className="text-base sm:text-lg font-medium text-gray-800">Chat da Biblioteca</h1>
+        <div className="flex items-center gap-3">
+          <span className="text-xs sm:text-sm text-gray-500 hidden sm:block">Administrador da biblioteca</span>
+          <button onClick={handleNewChat} className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors text-xs font-medium" title="Novo chat">
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Novo chat</span>
           </button>
-          <span className="text-xs sm:text-sm text-gray-500">Criar novo chat</span>
         </div>
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20">
+      <div className="flex-1 overflow-y-auto bg-white">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <Bot className="h-10 w-10 sm:h-12 sm:w-12 mb-4 text-gray-400" />
-            <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">Olá, seja bem vindo</h3>
-            <p className="text-xs sm:text-sm text-gray-500 mb-6 text-center">Como posso ajudar você hoje?</p>
-            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3 w-full max-w-md">
-              <button
-                onClick={() => handleSuggestionClick("Listar todos os livros disponíveis")}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 rounded-full text-xs sm:text-sm text-gray-700 hover:bg-gray-100 w-full sm:w-auto"
-              >
-                Listar todos os livros
-              </button>
-              <button
-                onClick={() => handleSuggestionClick("Como funciona o sistema de empréstimos?")}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 rounded-full text-xs sm:text-sm text-gray-700 hover:bg-gray-100 w-full sm:w-auto"
-              >
-                Como funciona o sistema?
-              </button>
-              <button
-                onClick={() => handleSuggestionClick("Quais as melhores práticas para gerenciar a biblioteca?")}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 rounded-full text-xs sm:text-sm text-gray-700 hover:bg-gray-100 w-full sm:w-auto"
-              >
-                Melhores práticas
-              </button>
-              
+          <div className="flex flex-col items-center justify-center h-full py-12 px-4">
+            <Bot className="h-12 w-12 text-gray-300 mb-6" />
+            <h3 className="text-xl sm:text-2xl font-medium text-gray-800 mb-2">Olá, seja bem-vindo</h3>
+            <p className="text-sm text-gray-500 mb-8 text-center max-w-md">Como posso ajudar você hoje com a gestão da biblioteca?</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
+              {["Listar todos os livros disponíveis", "Como funciona o sistema de empréstimos?", "Quais as melhores práticas para gerenciar a biblioteca?"].map((suggestion) => (
+                <button key={suggestion} onClick={() => handleSuggestionClick(suggestion)} className="px-4 py-3 border border-gray-200 rounded-lg text-sm text-left text-gray-700 hover:bg-gray-50 transition-colors">
+                  {suggestion}
+                </button>
+              ))}
             </div>
           </div>
         ) : (
-          <div className="space-y-4 max-w-[90%] sm:max-w-6xl mx-auto">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex items-start gap-2 sm:gap-3 ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {message.role === "assistant" && (
-                  <Bot className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 flex-shrink-0" />
-                )}
-                <div
-                  className={`max-w-[85%] sm:max-w-[80%] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
-                    message.role === "user"
-                      ? "bg-blue-500 text-white"
-                      : message.isError
-                      ? "bg-red-100 text-red-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {message.isLoading && message.content === "" ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-3 sm:h-4 w-[150px] sm:w-[200px] bg-gray-300" />
-                      <Skeleton className="h-3 sm:h-4 w-[120px] sm:w-[150px] bg-gray-300" />
-                      <Skeleton className="h-3 sm:h-4 w-[80px] sm:w-[100px] bg-gray-300" />
+          <div>
+            {messages.map((message, index) => (
+              <div key={message.id} className={`px-4 sm:px-8 py-6 ${message.role === "assistant" ? "bg-gray-50" : "bg-white"} ${index !== 0 && message.role !== messages[index - 1].role ? "border-t border-gray-100" : ""}`}>
+                <div className="max-w-3xl mx-auto flex items-start gap-4">
+                  {message.role === "assistant" ? (
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
+                      <Bot className="h-3.5 w-3.5 text-white" />
                     </div>
                   ) : (
-                    <div
-                      className="prose prose-xs sm:prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
-                    />
+                    <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-1">
+                      <User className="h-3.5 w-3.5 text-white" />
+                    </div>
                   )}
+                  <div className={`flex-1 ${message.role === "assistant" ? "text-gray-700" : "text-gray-800"}`}>
+                    {message.isLoading && message.content === "" ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[200px] bg-gray-200" />
+                        <Skeleton className="h-4 w-[250px] bg-gray-200" />
+                        <Skeleton className="h-4 w-[180px] bg-gray-200" />
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }} />
+                    )}
+                  </div>
                 </div>
-                {message.role === "user" && (
-                  <User className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 flex-shrink-0" />
-                )}
               </div>
             ))}
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-4" />
           </div>
         )}
       </div>
 
       {/* Input Area */}
-      <footer className="p-3 sm:p-6 bg-white border-t border-gray-200">
-        <div className="flex items-center justify-center gap-2 sm:gap-3 max-w-[90%] sm:max-w-3xl mx-auto">
-          <button className="p-1 sm:p-2 text-gray-500 hover:text-gray-700">
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem..."
-            className="flex-1 min-h-[36px] container flex justify-center items-center sm:min-h-[40px] max-h-[100px] sm:max-h-[120px] resize-none rounded-full border border-gray-300 bg-white text-gray-800 px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-            disabled={isBotLoading}
-          />
-          <button className="p-1 sm:p-2 text-gray-500 hover:text-gray-700">
-            <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isBotLoading || !input.trim()}
-            className="p-1 sm:p-2 bg-blue-500 text-white rounded-full disabled:opacity-40"
-          >
-            <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
+      <footer className="px-4 sm:px-6 py-4 bg-white border-t border-gray-100 rounded-b-lg">
+        <div className="max-w-3xl mx-auto relative">
+          <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400 transition-all">
+            <button className="p-2 text-gray-400 hover:text-gray-600">
+              <Plus className="h-5 w-5" />
+            </button>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Digite sua mensagem..."
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none py-2 px-2 bg-transparent text-gray-800 text-sm focus:outline-none"
+              disabled={isBotLoading}
+            />
+            <button className="p-2 text-gray-400 hover:text-gray-600 hidden sm:block">
+              <Mic className="h-5 w-5" />
+            </button>
+            <button onClick={handleSubmit} disabled={isBotLoading || !input.trim()} className={`p-2 mx-1 rounded-md ${input.trim() && !isBotLoading ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-100 text-gray-400"} transition-colors`}>
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 text-center mt-2 px-2">A IA da Biblioteca está em fase experimental. Use-a com cuidado.</p>
         </div>
       </footer>
+
+      {/* Modal de Alerta Estilizado */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-60 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 transform transition-all duration-300 scale-100 hover:scale-[1.01]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                <span className="text-yellow-600 text-2xl">!</span>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800">Aviso Importante</h2>
+            </div>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              O Chat da Biblioteca está em fase de teste. Algumas funcionalidades podem apresentar instabilidade. Se encontrar algum problema, por favor, entre em contato comigo pelo e-mail:{" "}
+              <a
+                href="mailto:gabrieldiassantiago@hotmail.com"
+                className="text-blue-500 hover:text-blue-600 underline font-medium"
+              >
+                gabrieldiassantiago@hotmail.com
+              </a>
+            </p>
+            <button
+              onClick={closeModal}
+              className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 font-medium"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

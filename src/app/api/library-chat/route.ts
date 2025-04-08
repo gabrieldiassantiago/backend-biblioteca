@@ -38,12 +38,30 @@ IMPORTANTE: Para qualquer operação de banco de dados, você deve chamar a fun�
 - Para pesquisar usuários: chame a função searchUsers com o nome
 - Para criar um empréstimo: chame a função createLoan com os detalhes do empréstimo
 - Para verificar empréstimos: chame a função checkLoans com o ID do usuário ou livro
+- Para renovar empréstimos: chame a função renewLoan com o ID do empréstimo
+- Para obter detalhes de um livro: chame a função getBook com o ID do livro
+- para renovar um emprestimo, voce deve chamar a função renewLoan com o ID do livro e do usuário, ou o nome do usuário e o título do livro (dai voce mesmo vai retornar o ID do livro e do usuário e perguntar pra qual 
+dia você quer renovar o emprestimo)
+- Para verificar empréstimos, chame a função checkLoans com o ID do usuário ou livro
+
+
 
 Sempre confirme com o usuário antes de realizar qualquer ação destrutiva como exclusão.
 
 Ao apresentar resultados de livros ou empréstimos, formate-os de maneira clara e organizada.
 
 Quando o usuário disser algo como "quero emprestar um livro", pergunte qual livro e para qual usuário.
+
+Jamais crie um dado que o banco de dados não tenha. Sempre busque informações no banco de dados antes de responder.
+Se não souber a resposta, diga que não sabe ou que não pode ajudar.
+Você não deve responder perguntas fora do escopo da biblioteca ou fornecer informações pessoais.
+Você deve sempre responder em português e usar emojis para tornar a conversa mais amigável.
+Você deve sempre validar os dados antes de realizar qualquer operação no banco de dados.
+Você deve sempre retornar uma resposta clara e amigável, mesmo em caso de erro.
+Você deve sempre usar a tipagem correta para os dados que está manipulando.
+Você deve sempre usar o formato de data brasileiro (dd/mm/aaaa) ao apresentar datas.
+
+
 `;
 
 // Interface para mensagens
@@ -205,7 +223,6 @@ async function searchUsers(query: string): Promise<{ success: boolean; message: 
   }
 }
 
-// Função createLoan com tipagem corrigida
 async function createLoan(
   bookId: string,
   userId: string,
@@ -303,6 +320,112 @@ async function createLoan(
     return {
       success: false,
       message: `Erro ao criar empréstimo: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+    };
+  }
+}
+
+
+async function renewLoan({
+  userName,
+  bookTitle,
+  specificDueDate
+}: {
+  userName?: string;
+  bookTitle?: string;
+  specificDueDate?: string; // Nova propriedade para data específica
+}): Promise<{ success: boolean; message: string; loan?: Loan }> {
+  const supabase = await createClient();
+
+  try {
+    // Verificar autenticação
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, message: "Usuário não autenticado" };
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("library_id")
+      .eq("id", user.id)
+      .single();
+
+    if (userError || !userData?.library_id) {
+      return { success: false, message: "Usuário não está vinculado a uma biblioteca" };
+    }
+
+    const libraryId = userData.library_id;
+
+    // Buscar usuário
+    const { users } = await searchUsers(userName || "");
+    if (!users || users.length === 0) {
+      return { success: false, message: `Nenhum usuário encontrado com o nome "${userName}"` };
+    }
+    if (users.length > 1) {
+      return { success: false, message: `Múltiplos usuários encontrados para "${userName}". Use o ID do usuário.` };
+    }
+    const userId = users[0].id;
+
+    // Buscar livro
+    const { data: books } = await supabase
+      .from("books")
+      .select("id, title, author, isbn, stock, available")
+      .eq("library_id", libraryId)
+      .ilike("title", `%${bookTitle}%`)
+      .limit(2);
+
+    if (!books || books.length === 0) {
+      return { success: false, message: `Nenhum livro encontrado com o título "${bookTitle}"` };
+    }
+    if (books.length > 1) {
+      return { success: false, message: `Múltiplos livros encontrados para "${bookTitle}". Use o ID do livro.` };
+    }
+    const bookId = books[0].id;
+
+    // Buscar empréstimo ativo
+    const { loans } = await checkLoans({ userId, bookId });
+    if (!loans || loans.length === 0) {
+      return { success: false, message: "Nenhum empréstimo ativo encontrado para este livro e usuário" };
+    }
+    if (loans.length > 1) {
+      return { success: false, message: "Múltiplos empréstimos encontrados. Use o ID do empréstimo." };
+    }
+
+    const loan = loans[0];
+    const newDueDate = specificDueDate ? new Date(specificDueDate) : new Date(loan.due_date);
+    if (!specificDueDate) newDueDate.setDate(newDueDate.getDate() + 14); // Padrão: +14 dias
+
+    // Atualizar o empréstimo
+    const { data: updatedLoan, error: updateError } = await supabase
+      .from("loans")
+      .update({ 
+        due_date: newDueDate.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", loan.id)
+      .select(`
+        id,
+        created_at,
+        due_date,
+        status,
+        books:book_id(id, title, author, isbn, stock, available),
+        users:user_id(id, full_name, email)
+      `)
+      .single()
+      .returns<Loan>();
+
+    if (updateError) {
+      return { success: false, message: `Erro ao renovar: ${updateError.message}` };
+    }
+
+    return {
+      success: true,
+      message: "Empréstimo renovado com sucesso",
+      loan: updatedLoan
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Erro ao processar renovação: ${error instanceof Error ? error.message : "Erro desconhecido"}`
     };
   }
 }
@@ -446,7 +569,6 @@ O livro foi registrado como emprestado e sua disponibilidade foi atualizada no s
               },
               required: ["title", "author", "isbn", "stock", "available"],
             },
-            
           },
           {
             name: "deleteBook",
@@ -454,6 +576,15 @@ O livro foi registrado como emprestado e sua disponibilidade foi atualizada no s
             parameters: {
               type: "OBJECT",
               properties: { id: { type: "STRING", description: "ID do livro a ser excluído" } },
+              required: ["id"],
+            },
+          },
+          {
+            name: "getBook",
+            description: "Obter detalhes de um livro específico",
+            parameters: {
+              type: "OBJECT",
+              properties: { id: { type: "STRING", description: "ID do livro" } },
               required: ["id"],
             },
           },
@@ -496,7 +627,6 @@ O livro foi registrado como emprestado e sua disponibilidade foi atualizada no s
               },
               required: ["bookId", "userId"],
             },
-           
           },
           {
             name: "checkLoans",
@@ -509,8 +639,21 @@ O livro foi registrado como emprestado e sua disponibilidade foi atualizada no s
               },
             },
           },
-        ],
-      },
+          {
+            name: "renewLoan",
+            description: "Renovar um empréstimo existente usando nome do usuário e título do livro",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                userName: { type: "STRING", description: "Nome do usuário do empréstimo" },
+                bookTitle: { type: "STRING", description: "Título do livro do empréstimo" },
+                specificDueDate: { type: "STRING", description: "Data específica de devolução (formato ISO, opcional)" }
+              },
+              required: ["userName", "bookTitle"]
+            }
+          }
+        ]
+      }
     ];
 
     const response = await fetch(
@@ -606,7 +749,6 @@ O livro foi registrado como emprestado e sua disponibilidade foi atualizada no s
           case "searchBooks": {
             const supabase = await createClient();
           
-            // Obter o library_id do usuário autenticado
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
               return new Response(
@@ -691,6 +833,26 @@ O livro foi registrado como emprestado e sua disponibilidade foi atualizada no s
                   .join("\n\n")}`;
             break;
           }
+          case "renewLoan": {
+            const result = await renewLoan({
+              userName: args.userName as string,
+              bookTitle: args.bookTitle as string,
+              specificDueDate: args.specificDueDate as string // Nova opção para data específica
+            });
+          
+            if (!result.success) {
+              functionResponse = `❌ ${result.message}`;
+            } else {
+              functionResponse = `✅ **Empréstimo renovado com sucesso!**\n\n` +
+                `📚 **Detalhes do empréstimo:**\n` +
+                `- **Livro:** ${result.loan!.books.title}\n` +
+                `- **Usuário:** ${result.loan!.users.full_name}\n` +
+                `- **Nova data de devolução:** ${formatDate(result.loan!.due_date)}\n` +
+                `- **ID do empréstimo:** \`${result.loan!.id}\``;
+            }
+            break;
+          }
+
           case "searchUsers": {
             const result = await searchUsers(args.query as string);
             if (!result.success) {

@@ -1,4 +1,3 @@
-// src/app/(admin)/admin/loans/actions.ts
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
@@ -6,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/app/lib/email-service";
 
 // Obter o ID da biblioteca do usuário autenticado
-async function getUserLibraryId() {
+export async function getUserLibraryId() {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error("Usuário não autenticado");
@@ -21,113 +20,12 @@ async function getUserLibraryId() {
   return userData.library_id;
 }
 
-// Buscar livros por título
-export async function searchBooks(query: string) {
-  try {
-    const supabase = await createClient();
-    const libraryId = await getUserLibraryId();
-
-    if (!query || query.trim().length < 2) return [];
-
-    const { data, error } = await supabase
-      .from("books")
-      .select("id, title, author, available, stock")
-      .eq("library_id", libraryId)
-      .ilike("title", `%${query}%`)
-      .order("title")
-      .limit(10);
-
-    if (error) throw new Error("Erro ao buscar livros: " + error.message);
-    return data || [];
-  } catch (error) {
-    console.error("Erro ao buscar livros:", error);
-    return [];
-  }
-}
-
-// Buscar alunos/usuários por nome
-export async function searchUsers(query: string) {
-  try {
-    const supabase = await createClient();
-    const libraryId = await getUserLibraryId();
-
-    if (!query || query.trim().length < 2) return [];
-
-    const { data, error } = await supabase
-      .from("users")
-      .select("id, full_name, email, role")
-      .eq("library_id", libraryId)
-      .eq("role", "student")
-      .ilike("full_name", `%${query}%`)
-      .order("full_name")
-      .limit(10);
-
-    if (error) throw new Error("Erro ao buscar usuários: " + error.message);
-    return data || [];
-  } catch (error) {
-    console.error("Erro ao buscar usuários:", error);
-    return [];
-  }
-}
-
-// Criar um novo empréstimo
-export async function createNewLoan(bookId: string, userId: string) {
-  const supabase = await createClient();
-  const libraryId = await getUserLibraryId();
-
-  // Verificar se o livro está disponível
-  const { data: book, error: bookError } = await supabase
-    .from("books")
-    .select("available, stock")
-    .eq("id", bookId)
-    .single();
-
-  if (bookError || !book) throw new Error("Livro não encontrado");
-  if (book.available <= 0 || book.stock <= 0) throw new Error("Livro não está disponível para empréstimo");
-
-  // Verificar se o aluno já tem empréstimos pendentes ou ativos em excesso
-  const { data: activeLoans, error: loansError } = await supabase
-    .from("loans")
-    .select("id")
-    .eq("user_id", userId)
-    .in("status", ["pending", "active"]);
-
-  if (loansError) throw new Error("Erro ao verificar empréstimos ativos: " + loansError.message);
-  if (activeLoans?.length >= 3) throw new Error("Usuário já atingiu o limite de empréstimos pendentes ou ativos");
-
-  // Criar o empréstimo com status "active"
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 7);
-
-  const { data: newLoan, error: insertError } = await supabase
-    .from("loans")
-    .insert({
-      user_id: userId,
-      book_id: bookId,
-      library_id: libraryId,
-      borrowed_at: new Date().toISOString(),
-      due_date: dueDate.toISOString(),
-      status: "active",
-    })
-    .select()
-    .single();
-
-  if (insertError) throw new Error("Erro ao criar empréstimo: " + insertError.message);
-
-  // Enviar email de confirmação
-  try {
-    await sendEmail(newLoan.id, 'newLoan');
-    console.log(`Email de confirmação enviado para o empréstimo ${newLoan.id}`);
-  } catch (emailError) {
-    console.error("Erro ao enviar email de confirmação:", emailError);
-  }
-
-  revalidatePath("/admin/loans");
-  return { success: true, message: "Empréstimo criado com sucesso. Uma notificação foi enviada ao usuário." };
-}
-
 // Atualizar o status de um empréstimo
-export async function updateLoanStatus(loanId: string, newStatus: "pending" | "active" | "returned" | "overdue" | "rejected") {
+export async function updateLoanStatus(
+  loanId: string, 
+  newStatus: "pending" | "active" | "returned" | "overdue" | "rejected",
+  formData?: FormData
+) {
   console.log("Iniciando updateLoanStatus", { loanId, newStatus });
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
@@ -144,14 +42,30 @@ export async function updateLoanStatus(loanId: string, newStatus: "pending" | "a
   if (loan.status === newStatus) throw new Error(`Este empréstimo já está como "${newStatus}"`);
 
   // Preparar os dados de atualização
-  const updateData: { status: string; returned_at?: string | null; updated_at: string } = {
+  const updateData: { 
+    status: string; 
+    returned_at?: string | null; 
+    updated_at: string;
+    return_observation?: string;
+  } = {
     status: newStatus,
     updated_at: new Date().toISOString(),
   };
 
   // Ajustar a data de devolução se for "returned"
   if (newStatus === "returned") {
-    updateData.returned_at = new Date().toISOString();
+    // Se tiver formData com data de devolução, usar essa data
+    if (formData && formData.get("returnDate")) {
+      const returnDate = formData.get("returnDate") as string;
+      updateData.returned_at = new Date(returnDate).toISOString();
+    } else {
+      updateData.returned_at = new Date().toISOString();
+    }
+    
+    // Adicionar observação se fornecida
+    if (formData && formData.get("observation")) {
+      updateData.return_observation = formData.get("observation") as string;
+    }
   } else {
     updateData.returned_at = null;
   }
@@ -273,4 +187,109 @@ export async function extendLoanDueDate(loanId: string, formData: FormData) {
 
   revalidatePath("/admin/loans");
   return { success: true, message: "Prazo estendido com sucesso!" };
+}
+
+// Buscar livros por título
+export async function searchBooks(query: string) {
+  try {
+    const supabase = await createClient();
+    const libraryId = await getUserLibraryId();
+
+    if (!query || query.trim().length < 2) return [];
+
+    const { data, error } = await supabase
+      .from("books")
+      .select("id, title, author, available, stock")
+      .eq("library_id", libraryId)
+      .ilike("title", `%${query}%`)
+      .order("title")
+      .limit(10);
+
+    if (error) throw new Error("Erro ao buscar livros: " + error.message);
+    return data || [];
+  } catch (error) {
+    console.error("Erro ao buscar livros:", error);
+    return [];
+  }
+}
+
+// Buscar alunos/usuários por nome
+export async function searchUsers(query: string) {
+  try {
+    const supabase = await createClient();
+    const libraryId = await getUserLibraryId();
+
+    if (!query || query.trim().length < 2) return [];
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, full_name, email, role")
+      .eq("library_id", libraryId)
+      .eq("role", "student")
+      .ilike("full_name", `%${query}%`)
+      .order("full_name")
+      .limit(10);
+
+    if (error) throw new Error("Erro ao buscar usuários: " + error.message);
+    return data || [];
+  } catch (error) {
+    console.error("Erro ao buscar usuários:", error);
+    return [];
+  }
+}
+
+// Criar um novo empréstimo
+export async function createNewLoan(bookId: string, userId: string) {
+  const supabase = await createClient();
+  const libraryId = await getUserLibraryId();
+
+  // Verificar se o livro está disponível
+  const { data: book, error: bookError } = await supabase
+    .from("books")
+    .select("available, stock")
+    .eq("id", bookId)
+    .single();
+
+  if (bookError || !book) throw new Error("Livro não encontrado");
+  if (book.available <= 0 || book.stock <= 0) throw new Error("Livro não está disponível para empréstimo");
+
+  // Verificar se o aluno já tem empréstimos pendentes ou ativos em excesso
+  const { data: activeLoans, error: loansError } = await supabase
+    .from("loans")
+    .select("id")
+    .eq("user_id", userId)
+    .in("status", ["pending", "active"]);
+
+  if (loansError) throw new Error("Erro ao verificar empréstimos ativos: " + loansError.message);
+  if (activeLoans?.length >= 3) throw new Error("Usuário já atingiu o limite de empréstimos pendentes ou ativos");
+
+  // Criar o empréstimo com status "active"
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 7);
+
+  const { data: newLoan, error: insertError } = await supabase
+    .from("loans")
+    .insert({
+      user_id: userId,
+      book_id: bookId,
+      library_id: libraryId,
+      borrowed_at: new Date().toISOString(),
+      due_date: dueDate.toISOString(),
+      status: "active",
+    })
+    .select()
+    .single();
+
+  if (insertError) throw new Error("Erro ao criar empréstimo: " + insertError.message);
+
+  // Enviar email de confirmação
+  try {
+    await sendEmail(newLoan.id, 'newLoan');
+    console.log(`Email de confirmação enviado para o empréstimo ${newLoan.id}`);
+  } catch (emailError) {
+    console.error("Erro ao enviar email de confirmação:", emailError);
+  }
+
+  revalidatePath("/admin/loans");
+  return { success: true, message: "Empréstimo criado com sucesso. Uma notificação foi enviada ao usuário." };
 }

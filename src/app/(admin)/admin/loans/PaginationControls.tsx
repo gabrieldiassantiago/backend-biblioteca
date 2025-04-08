@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface PaginationControlsProps {
   currentPage: number
@@ -96,8 +96,8 @@ export function PaginationControls({ currentPage, totalPages, totalItems, status
   const pageNumbers = getPageNumbers()
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-4 border-t bg-white">
-      <div className="text-sm text-muted-foreground order-2 sm:order-1">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-6">
+      <div className="text-sm text-gray-500 order-2 sm:order-1">
         Página {currentPage} de {totalPages} (Total: {totalItems} empréstimos)
       </div>
 
@@ -151,4 +151,3 @@ export function PaginationControls({ currentPage, totalPages, totalItems, status
     </div>
   )
 }
-
