@@ -44,7 +44,7 @@ async function getLibraryName(libraryId: string) {
   return data.name;
 }
 
-// Função para cadastrar ou atualizar um livro
+// Função para cadastrar ou atualizar um livro IA
 export async function handleSubmitBook(formData: FormData) {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
@@ -71,6 +71,7 @@ export async function handleSubmitBook(formData: FormData) {
   if (isNaN(available) || available < 0) {
     throw new Error("A quantidade disponível não pode ser negativa.");
   }
+  
   if (available > stock) {
     throw new Error("A quantidade disponível não pode ser maior que o estoque.");
   }
