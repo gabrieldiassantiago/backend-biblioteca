@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Home, Book, BookOpen, LogOut, User, Library, ChevronRight, BookMarked, MessageCircle } from 'lucide-react'
+import { Menu, Home, Book, BookOpen, LogOut, User, Library, ChevronRight, BookMarked, MessageCircle, Settings } from 'lucide-react'
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -18,7 +18,6 @@ export default async function AdminLayout({
   children: ReactNode
 }) {
   const supabase = await createClient()
-
   // Obter dados do usuário autenticado
   const { data: { user } } = await supabase.auth.getUser()
   const { data: userData } = await supabase
@@ -39,12 +38,15 @@ export default async function AdminLayout({
       .toUpperCase()
       .substring(0, 2)
   }
+  
+  
 
   async function handleLogout() {
     "use server"
     const supabase = await createClient()
     await supabase.auth.signOut()
     redirect("/login")
+    
   }
 
   const menuItems = [
@@ -53,6 +55,7 @@ export default async function AdminLayout({
     { href: "/admin/loans", icon: BookOpen, label: "Empréstimos", description: "Gerenciar empréstimos e devoluções" },
     { href: "/admin/users", icon: User, label: "Alunos", description: "Gerenciar cadastros de alunos" },
     { href: "/admin/chat", icon: MessageCircle, label: "Chat IA", description: "Use IA para automatizar suas tarefas" },
+    { href: "/admin/settings", icon: Settings, label: "Configurações", description: "Configurações da biblioteca" },
 
   ]
 

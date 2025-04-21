@@ -174,9 +174,10 @@ export async function handleBorrow(formData: FormData) {
     throw new Error("Erro ao buscar usuário.");
   }
 
-  if (userData.role !== "admin") {
-    console.error("Usuário não autorizado para empréstimos:", userData.role);
-    throw new Error("Você não possui autorização para realizar empréstimos.");
+  //se usuario for admin, nao pode pegar emprestado
+  if (userData.role === "admin") {
+    console.error("Usuário não tem permissão para realizar empréstimos.");
+    throw new Error("Você não tem permissão para realizar empréstimos, pois é um administrador.");
   }
 
   // Verificar se o usuário já tem um empréstimo "active"

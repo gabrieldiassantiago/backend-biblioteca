@@ -1,15 +1,17 @@
 // app/api/cron/check-overdue-loans/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from "@/lib/supabase/server";
-import { sendEmails } from '@/app/lib/email-service';
+import { sendEmail } from '@/app/lib/email-service';
 
 
 export async function POST(request: NextRequest) {
   if (request.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+
   }
 
   try {
+
     const supabase = await createClient();
     const today = new Date().toISOString().split('T')[0];
     
@@ -62,7 +64,6 @@ export async function POST(request: NextRequest) {
       .eq("status", "overdue")
       .is("returned_at", null);
       
-      
     if (overdueError) {
       console.error("Erro ao buscar todos os empréstimos atrasados:", overdueError);
       return NextResponse.json({ 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     
     for (const loan of allOverdueLoans || []) {
       try {
-        await sendEmails(loan.id, "overdueLoan");
+        await sendEmail(loan.id, "overdueLoan");
         emailsSent++;
         console.log(`Email de lembrete enviado para empréstimo ${loan.id} (vencido em ${loan.due_date})`);
       } catch (err) {

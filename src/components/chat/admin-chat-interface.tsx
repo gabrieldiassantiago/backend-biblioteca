@@ -127,11 +127,11 @@ export function AdminChatInterface() {
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-4">
             <Bot className="h-12 w-12 text-gray-300 mb-6" />
-            <h3 className="text-xl sm:text-2xl font-medium text-gray-800 mb-2">Olá, seja bem-vindo</h3>
+            <h3 className="text-xl sm:text-2xl font-medium text-gray-800 mb-2">Olá, seja bem-vinda</h3>
             <p className="text-sm text-gray-500 mb-8 text-center max-w-md">Como posso ajudar você hoje com a gestão da biblioteca?</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
               {["Listar todos os livros disponíveis", "Como funciona o sistema de empréstimos?", "Quais as melhores práticas para gerenciar a biblioteca?"].map((suggestion) => (
-                <button key={suggestion} onClick={() => handleSuggestionClick(suggestion)} className="px-4 py-3 border border-gray-200 rounded-lg text-sm text-left text-gray-700 hover:bg-gray-50 transition-colors">
+                <button key={suggestion} onClick={() => handleSuggestionClick(suggestion)} className="px-4 bg-gray-100 py-3 border border-gray-200 rounded-2xl text-sm text-left text-gray-700 hover:bg-gray-50 transition-colors">
                   {suggestion}
                 </button>
               ))}
@@ -183,7 +183,7 @@ export function AdminChatInterface() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Digite sua mensagem..."
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none py-2 px-2 bg-transparent text-gray-800 text-sm focus:outline-none"
+              className="flex-1 min-h-[40px] max-h-auto resize-none py-2 px-2 bg-transparent text-gray-800 text-sm focus:outline-none"
               disabled={isBotLoading}
             />
             <button className="p-2 text-gray-400 hover:text-gray-600 hidden sm:block">

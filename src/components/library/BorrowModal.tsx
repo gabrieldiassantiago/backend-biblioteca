@@ -7,6 +7,7 @@ import { X, BookOpen, CheckCircle, UserPlus, LogIn, Mail, Lock, User, Calendar, 
 import { handleRegisterAndBorrow, handleBorrow, handleLogin } from "../../app/biblioteca/[slug]/actions";
 import { User as UserType } from "@/types/lbrary";
 import { motion } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 interface BorrowModalProps {
   isOpen: boolean;
@@ -213,63 +214,73 @@ export default function BorrowModal({ isOpen, onClose, bookId, libraryId, slug, 
                 <input type="hidden" name="libraryId" value={libraryId} />
                 <input type="hidden" name="slug" value={slug} />
 
-                {isRegistering && (
-                  <>
-                    <div className="space-y-2">
-                      <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Nome completo
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <User className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <Input
-                          id="fullName"
-                          name="fullName"
-                          placeholder="Digite seu nome completo"
-                          required
-                          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
-                        />
-                      </div>
-                    </div>
+               {isRegistering && (
+  <>
+    <div className="space-y-2">
+      <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Nome completo
+      </label>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+          <User className="h-5 w-5 text-gray-400" />
+        </div>
+        <Input
+          id="fullName"
+          name="fullName"
+          placeholder="Digite seu nome completo"
+          required
+          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
+        />
+      </div>
+    </div>
 
-                    <div className="space-y-2">
-                      <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Turma
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <School className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <Input
-                          id="class"
-                          name="class"
-                          placeholder="Ex.: A, B, Turma 1"
-                          required
-                          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
-                        />
-                      </div>
-                    </div>
+    <div className="space-y-2">
+      <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Turma
+      </label>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+          <School className="h-5 w-5 text-gray-400" />
+        </div>
+        <Input
+          id="class"
+          name="class"
+          placeholder="Ex.: A, B, Turma 1"
+          required
+          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
+        />
+      </div>
+    </div>
 
-                    <div className="space-y-2">
-                      <label htmlFor="grade" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Série/Ano
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <School className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <Input
-                          id="grade"
-                          name="grade"
-                          placeholder="Ex.: 1º ano, 9º ano"
-                          required
-                          className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
+    <div className="space-y-2">
+      <label htmlFor="grade" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Série/Ano
+      </label>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+          <School className="h-5 w-5 text-gray-400" />
+        </div>
+        <Select name="grade" required>
+          <SelectTrigger
+            id="grade"
+            className="pl-10 py-6 rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <SelectValue placeholder="Selecione a série/ano" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="6º ano Fundamental">6º ano Fundamental</SelectItem>
+            <SelectItem value="7º ano Fundamental">7º ano Fundamental</SelectItem>
+            <SelectItem value="8º ano Fundamental">8º ano Fundamental</SelectItem>
+            <SelectItem value="9º ano Fundamental">9º ano Fundamental</SelectItem>
+            <SelectItem value="1º ano Médio">1º ano Médio</SelectItem>
+            <SelectItem value="2º ano Médio">2º ano Médio</SelectItem>
+            <SelectItem value="3º ano Médio">3º ano Médio</SelectItem>
+          </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </>
+      )}
 
                 <div className="space-y-2">
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">

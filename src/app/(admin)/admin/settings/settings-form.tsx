@@ -61,6 +61,7 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
       newErrors.contactEmail = "Por favor, insira um endereço de email válido.";
       isValid = false;
     }
+    
 
     if (location.length < 5) {
       newErrors.location = "A localização deve ter pelo menos 5 caracteres.";

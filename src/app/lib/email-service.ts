@@ -552,34 +552,27 @@ const templates: {
   },
 }
 
-// Função otimizada para enviar e-mails em paralelo
-export async function sendEmails(loanIds: string[], type: "newLoan" | "overdueLoan" | "rejectedLoan" | "returnedLoan" | "updateLoan") {
+export async function sendEmail(loanId: string, type: "newLoan" | "overdueLoan" | "rejectedLoan" | "returnedLoan" | "updateLoan") {
   try {
-    // Recupera os detalhes dos empréstimos em paralelo
-    const loanPromises = loanIds.map(loanId => getLoanDetails(loanId));
-    const loans = await Promise.all(loanPromises);
+    const loan = await getLoanDetails(loanId)
 
-    // Filtra empréstimos sem e-mail
-    const validLoans = loans.filter(loan => loan.users.email);
+    if (!loan.users.email) {
+      console.error(`Usuário ${loan.users.full_name} não tem email cadastrado`)
+      return
+    }
 
-    // Envia e-mails em paralelo
-    const emailPromises = validLoans.map(async (loan) => {
-      const template = templates[type](loan);
-      
-      await transporter.sendMail({
-        from: `"Biblioteca ${loan.library_name}" <${process.env.EMAIL_FROM}>`,
-        to: loan.users.email,
-        subject: template.subject,
-        html: template.html,
-      });
+    const template = templates[type](loan)
 
-      console.log(`Email enviado com sucesso: ${type} para ${loan.users.email}`);
-    });
+    await transporter.sendMail({
+      from: `"Biblioteca ${loan.library_name}" <${process.env.EMAIL_FROM}>`,
+      to: loan.users.email,
+      subject: template.subject,
+      html: template.html,
+    })
 
-    // Aguarda o envio de todos os e-mails
-    await Promise.all(emailPromises);
+    console.log(`Email enviado com sucesso: ${type} para ${loan.users.email}`)
   } catch (error) {
-    console.error("Erro ao enviar e-mails:", error);
-    throw new Error("Falha ao enviar e-mails");
+    console.error("Erro ao enviar email:", error)
+    throw new Error("Falha ao enviar email")
   }
 }
