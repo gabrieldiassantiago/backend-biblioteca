@@ -70,7 +70,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/login',
-    '/register',
     '/admin/((?!api|_next/static|_next/image|favicon.ico).*)', // Exclui APIs, assets estáticos e favicon
   ],
 };

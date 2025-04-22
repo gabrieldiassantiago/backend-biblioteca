@@ -8,6 +8,7 @@ interface LibrarySettings {
   userName: string;
   contactEmail: string;
   location: string;
+  librarySlug: string; // Novo campo para o slug
 }
 
 export async function getLibrarySettings(): Promise<LibrarySettings | null> {
@@ -41,7 +42,7 @@ export async function getLibrarySettings(): Promise<LibrarySettings | null> {
   // 3. Fetch library data
   const { data: libraryData, error: libraryError } = await supabase
     .from("libraries")
-    .select("name, contact_email, location")
+    .select("name, contact_email, location, slug")
     .eq("id", userData.library_id)
     .single();
 
@@ -85,6 +86,8 @@ export async function getLibrarySettings(): Promise<LibrarySettings | null> {
     userName: authName,
     contactEmail: authEmail,
     location: libraryData.location || "",
+    librarySlug: libraryData.slug || "",
+    
   };
 }
 

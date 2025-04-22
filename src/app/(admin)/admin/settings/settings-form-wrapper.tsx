@@ -7,6 +7,7 @@ interface LibrarySettings {
   userName: string;
   contactEmail: string;
   location: string;
+  librarySlug: string;
 }
 
 // Componente Wrapper que busca os dados iniciais e renderiza o formulário
@@ -22,6 +23,7 @@ export default async function SettingsFormWrapper() {
       userName: settings?.userName || "",
       contactEmail: settings?.contactEmail || "",
       location: settings?.location || "",
+      librarySlug: settings?.librarySlug || "",
     };
 
     // Renderiza o formulário passando os dados iniciais seguros

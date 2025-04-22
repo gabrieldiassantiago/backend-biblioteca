@@ -328,7 +328,7 @@ export async function getLibraryBySlug(slug: string) {
   const { data: library, error } = await supabase
     .from("libraries")
     .select("*")
-    .eq("name", slug)
+    .eq("slug", slug)
     .single();
 
   if (error || !library) {

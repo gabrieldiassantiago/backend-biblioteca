@@ -124,15 +124,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
             <SubmitButton />
 
-            <div className="tex-center text-sm">
-              <span className="text-gray-500">Não tem uma conta? </span>
-              <Link
-                href="/register"
-                className="text-primary font-medium hover:text-primary/80 transition-colors"
-              >
-                Criar conta
-              </Link>
-            </div>
+           
           </form>
 
           <div className="pt-4 text-center">
