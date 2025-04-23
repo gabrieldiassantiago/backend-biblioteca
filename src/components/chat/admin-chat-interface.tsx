@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from "react"
-import { Send, Plus, Mic, Bot, User, RotateCcw } from "lucide-react"
+import { Send, Plus, Mic, Bot, User, RotateCcw, Compass, Code, DraftingCompass, Lightbulb } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface Message {
@@ -57,6 +57,8 @@ export function AdminChatInterface() {
     }, typingSpeed)
   }
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isBotLoading) return
@@ -65,7 +67,10 @@ export function AdminChatInterface() {
     setMessages(prev => [...prev, userMessage, assistantPlaceholder])
     setInput("")
     try {
-      const response = await fetch("/api/library-chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [...messages, userMessage] }) })
+      const response = await fetch("/api/library-chat", 
+        { method: "POST", 
+          headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ messages: [...messages, userMessage] }) })
       if (!response.ok) throw new Error("Erro na API")
       const data = await response.json()
       const assistantResponse = data.content || "Desculpe, não consegui processar isso."
@@ -109,105 +114,146 @@ export function AdminChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-[724px] w-full bg-white shadow-sm rounded-lg border border-gray-100">
+    <div className="relative overflow-hiden flex flex-col  w-full h-screen bg-white">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-lg">
-        <h1 className="text-base sm:text-lg font-medium text-gray-800">Chat da Biblioteca</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-xs sm:text-sm text-gray-500 hidden sm:block">Administrador da biblioteca</span>
-          <button onClick={handleNewChat} className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors text-xs font-medium" title="Novo chat">
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Novo chat</span>
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 text-sm sm:text-base font-light text-gray-600 border-b border-gray-100">
+        <p className="text-gray-800 font-medium">Chat da Biblioteca</p>
+        <div className="flex items-center gap-2 sm:gap-3">
+         
+          <button
+            onClick={handleNewChat}
+            className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors text-xs sm:text-sm font-medium"
+            title="Novo chat"
+          >
+            <RotateCcw className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            Novo chat
           </button>
         </div>
       </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-white">
+      {/* Main Content */}
+      <div className="mx-auto w-full max-w-4xl flex-1 ">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-12 px-4">
-            <Bot className="h-12 w-12 text-gray-300 mb-6" />
-            <h3 className="text-xl sm:text-2xl font-medium text-gray-800 mb-2">Olá, seja bem-vinda</h3>
-            <p className="text-sm text-gray-500 mb-8 text-center max-w-md">Como posso ajudar você hoje com a gestão da biblioteca?</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
-              {["Listar todos os livros disponíveis", "Como funciona o sistema de empréstimos?", "Quais as melhores práticas para gerenciar a biblioteca?"].map((suggestion) => (
-                <button key={suggestion} onClick={() => handleSuggestionClick(suggestion)} className="px-4 bg-gray-100 py-3 border border-gray-200 rounded-2xl text-sm text-left text-gray-700 hover:bg-gray-50 transition-colors">
-                  {suggestion}
+          <div className="no-scrollbar mx-auto overflow-y-auto px-4 sm:px-6 pb-20 h-[calc(100vh-12rem)] sm:h-[calc(100vh-10rem)]">
+            <div className="my-8 sm:my-12 p-4 text-center">
+              <p className="text-3xl sm:text-4xl md:text-5xl font-medium text-gray-800">
+                <span className="bg-gradient-to-br from-blue-500 via-purple-500 to-red-500 bg-clip-text text-transparent">
+                  Olá, bem vindo ao chat da biblioteca!
+                </span>
+                <span className="block mt-2 text-xl sm:text-2xl">Como posso ajudar com a gestão da biblioteca?</span>
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 sm:gap-4 p-4">
+              {[
+                { label: "Listar todos os livros disponíveis", Icon: Compass },
+                { label: "Explicar o sistema de empréstimos", Icon: Code },
+                { label: "Melhores práticas para gerenciar a biblioteca", Icon: DraftingCompass },
+                { label: "Sugestões para eventos na biblioteca", Icon: Lightbulb },
+              ].map(({ label, Icon }, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSuggestionClick(label)}
+                  className="relative h-40 sm:h-48 cursor-pointer rounded-xl bg-gray-100 p-3 sm:p-4 duration-300 hover:bg-gray-200 text-gray-600 hover:text-gray-800"
+                >
+                  <p className="text-xs sm:text-sm text-left">{label}</p>
+                  <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 rounded-full bg-white p-1.5 sm:p-2">
+                    <Icon size={16}  />
+                  </div>
                 </button>
               ))}
             </div>
           </div>
         ) : (
-          <div>
+          <div className="no-scrollbar overflow-y-auto px-4 sm:px-6 pb-20 h-[calc(100vh-12rem)] sm:h-[calc(100vh-10rem)]">
             {messages.map((message, index) => (
-              <div key={message.id} className={`px-4 sm:px-8 py-6 ${message.role === "assistant" ? "bg-gray-50" : "bg-white"} ${index !== 0 && message.role !== messages[index - 1].role ? "border-t border-gray-100" : ""}`}>
-                <div className="max-w-3xl mx-auto flex items-start gap-4">
+              <div
+                key={message.id}
+                className={`my-6 sm:my-8 flex items-start gap-3 sm:gap-5 ${
+                  message.role === "assistant" ? "bg-gray-50" : "bg-white"
+                } ${index !== 0 && message.role !== messages[index - 1].role ? "border-t border-gray-100" : ""}`}
+              >
+                <div className="grid h-8 w-8 sm:h-10 sm:w-10 place-items-center rounded-full bg-gray-100">
                   {message.role === "assistant" ? (
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Bot className="h-3.5 w-3.5 text-white" />
+                    <Bot className="min-w-4 text-gray-600" size={14}  />
+                  ) : (
+                    <User className="min-w-4 text-gray-600" size={14} />
+                  )}
+                </div>
+                <div className="flex-1">
+                  {message.isLoading && message.content === "" ? (
+                    <div className="flex w-full flex-col gap-2">
+                      <Skeleton className="h-4 sm:h-5 w-8/12 bg-gray-200" />
+                      <Skeleton className="h-4 sm:h-5 w-10/12 bg-gray-200" />
+                      <Skeleton className="h-4 sm:h-5 w-6/12 bg-gray-200" />
                     </div>
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <User className="h-3.5 w-3.5 text-white" />
-                    </div>
+                    <div
+                      className="prose prose-xs sm:prose-sm max-w-none text-gray-700 leading-relaxed font-light"
+                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
+                    />
                   )}
-                  <div className={`flex-1 ${message.role === "assistant" ? "text-gray-700" : "text-gray-800"}`}>
-                    {message.isLoading && message.content === "" ? (
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[200px] bg-gray-200" />
-                        <Skeleton className="h-4 w-[250px] bg-gray-200" />
-                        <Skeleton className="h-4 w-[180px] bg-gray-200" />
-                      </div>
-                    ) : (
-                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }} />
-                    )}
-                  </div>
                 </div>
               </div>
             ))}
             <div ref={messagesEndRef} className="h-4" />
           </div>
         )}
+        
       </div>
 
-      {/* Input Area */}
-      <footer className="px-4 sm:px-6 py-4 bg-white border-t border-gray-100 rounded-b-lg">
-        <div className="max-w-3xl mx-auto relative">
-          <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400 transition-all">
-            <button className="p-2 text-gray-400 hover:text-gray-600">
-              <Plus className="h-5 w-5" />
-            </button>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite sua mensagem..."
-              className="flex-1 min-h-[40px] max-h-auto resize-none py-2 px-2 bg-transparent text-gray-800 text-sm focus:outline-none"
-              disabled={isBotLoading}
-            />
-            <button className="p-2 text-gray-400 hover:text-gray-600 hidden sm:block">
-              <Mic className="h-5 w-5" />
-            </button>
-            <button onClick={handleSubmit} disabled={isBotLoading || !input.trim()} className={`p-2 mx-1 rounded-md ${input.trim() && !isBotLoading ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-100 text-gray-400"} transition-colors`}>
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2 px-2">A IA da Biblioteca está em fase experimental. Use-a com cuidado.</p>
-        </div>
-      </footer>
+     {/* Input Area */}
+<div className=" bottom-0 m-auto flex justify-center items-center left-0 right-0 mx-auto max-w-5xl px-2 sm:px-4 pt-3 pb-4 sm:pt-4 sm:pb-6 backdrop-blur-sm bg-white/80">
+  <div className="flex justify-center mx-auto w-full max-w-5xl">
+    <div className="w-screen m-auto max-w-6xl">
+    <div className="flex items-center justify-center gap-2 sm:gap-4 rounded-3xl sm:rounded-full bg-gray-100 px-3 sm:px-4 py-2 sm:py-3 shadow-sm">
+    <button className="text-gray-600 hover:text-gray-800">
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+        <textarea
+  ref={textareaRef}
+  value={input}
+  onChange={(e) => setInput(e.target.value)}
+  onKeyDown={handleKeyDown}
+  placeholder="Digite sua mensagem..."
+  className="flex-1 mx-auto  flex h-[200vh] resize-none bg-transparent text-gray-800 text-xs sm:text-sm outline-none"
+  disabled={isBotLoading}
+/>
 
-      {/* Modal de Alerta Estilizado */}
+        <div className="flex items-center gap-2 sm:gap-4 text-gray-600">
+          <button className="hover:text-gray-800">
+            <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          {isBotLoading ? (
+            <Send className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!input.trim()}
+              className="hover:text-gray-800"
+            >
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="mx-auto mt-2 sm:mt-3 text-center text-xs sm:text-sm font-light text-gray-600">
+        A IA da Biblioteca está em fase experimental. Use-a com cuidado.
+      </p>
+    </div>
+  </div>
+</div>
+
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-60 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 transform transition-all duration-300 scale-100 hover:scale-[1.01]">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-[90vw] sm:max-w-md mx-4 shadow-2xl border border-gray-200 transform transition-all duration-300 scale-100 hover:scale-[1.01]">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                <span className="text-yellow-600 text-2xl">!</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                <span className="text-yellow-600 text-lg sm:text-2xl">!</span>
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">Aviso Importante</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Aviso Importante</h2>
             </div>
-            <p className="text-gray-600 mb-6 leading-relaxed">
+            <p className="text-gray-600 text-sm sm:text-base mb-4 sm:mb-6 leading-relaxed">
               O Chat da Biblioteca está em fase de teste. Algumas funcionalidades podem apresentar instabilidade. Se encontrar algum problema, por favor, entre em contato comigo pelo e-mail:{" "}
               <a
                 href="mailto:gabrieldiassantiago@hotmail.com"
@@ -218,7 +264,7 @@ export function AdminChatInterface() {
             </p>
             <button
               onClick={closeModal}
-              className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 font-medium"
+              className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 font-medium text-sm sm:text-base"
             >
               Entendido
             </button>

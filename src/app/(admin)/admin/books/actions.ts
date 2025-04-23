@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 // Função auxiliar para obter o library_id do usuário autenticado
 async function getUserLibraryId() {
@@ -14,17 +15,18 @@ async function getUserLibraryId() {
   } = await supabase.auth.getUser();
   if (authError || !user) throw new Error("Usuário não autenticado");
 
-  const { data: userData, error: userError } = await supabase
+  const { data: userData } = await supabase
     .from("users")
     .select("library_id")
     .eq("id", user.id)
     .single();
 
-  if (userError || !userData?.library_id) {
-    throw new Error("Usuário não está vinculado a uma biblioteca");
-  }
+    if (authError || !user) {
+      console.log("Usuário não autenticado, redirecionando para login");
+      redirect('/login');
+    }
 
-  return userData.library_id;
+  return userData?.library_id;
 }
 
 // Função auxiliar para obter o nome da biblioteca
@@ -165,7 +167,7 @@ export async function handleDeleteBook(bookId: string) {
 interface DashboardStats {
   totalBooks: number;
   booksTrend: number;
-  activeUsers: number;
+  totalUsers: number;
   usersTrend: number;
   activeLoans: number;
   loansTrend: number;
@@ -181,22 +183,21 @@ export const getDashboardStats = cache(async (): Promise<DashboardStats> => {
     const { data, error } = await supabase.rpc('get_dashboard_stats', { 
       library_id: libraryId 
     });
-    
+    console.log('Resultado da RPC get_dashboard_stats:', { data, error }); // Log para depuração
     if (error) throw error;
-    
+
     const booksTrend = calculateTrend(data.newBooks || 0, data.lastMonthBooks || 0);
     const usersTrend = calculateTrend(data.newUsers || 0, data.lastMonthUsers || 0);
     const loansTrend = calculateTrend(data.newLoans || 0, data.lastMonthLoans || 0);
-    
-    // Simulação de visitas (como no código original)
+
     const monthlyVisits = Math.floor(Math.random() * 10000);
     const lastMonthVisits = Math.floor(Math.random() * 9000) + 4000;
     const visitsTrend = calculateTrend(monthlyVisits, lastMonthVisits);
-    
+
     return {
       totalBooks: data.totalBooks || 0,
       booksTrend,
-      activeUsers: data.activeUsers || 0,
+      totalUsers: data.totalUsers || 0, // Alterado de activeUsers
       usersTrend,
       activeLoans: data.activeLoans || 0,
       loansTrend,
@@ -395,7 +396,6 @@ export async function getRecentLoans(): Promise<RecentLoan[]> {
   }
 }
 
-// Função para obter todos os dados do dashboard
 export const getAllDashboardData = cache(async () => {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
@@ -405,7 +405,6 @@ export const getAllDashboardData = cache(async () => {
   const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
 
   try {
-    // Buscar o nome da biblioteca
     const libraryName = await getLibraryName(libraryId);
 
     const [
@@ -419,7 +418,7 @@ export const getAllDashboardData = cache(async () => {
         supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
         supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
         supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
-        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
+        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId), // Removido filtro status
         supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
         supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
         supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
@@ -456,12 +455,11 @@ export const getAllDashboardData = cache(async () => {
         .limit(5),
     ]);
 
-    // Processar Stats
     const [
       totalBooks,
       newBooks,
       lastMonthBooks,
-      activeUsers,
+      totalUsers, // Alterado de activeUsers
       newUsers,
       lastMonthUsers,
       activeLoans,
@@ -478,7 +476,7 @@ export const getAllDashboardData = cache(async () => {
     const stats = {
       totalBooks,
       booksTrend,
-      activeUsers,
+      totalUsers, // Alterado de activeUsers
       usersTrend,
       activeLoans,
       loansTrend,
@@ -486,7 +484,6 @@ export const getAllDashboardData = cache(async () => {
       visitsTrend,
     };
 
-    // Processar Loan Status (incluindo "pending" e "rejected")
     const statusCounts = (loanStatusResponse.data ?? []).reduce(
       (acc: Record<string, number>, loan: { status: string }) => {
         acc[loan.status] = (acc[loan.status] || 0) + 1;
@@ -502,7 +499,6 @@ export const getAllDashboardData = cache(async () => {
       { name: "Rejeitados", value: statusCounts["rejected"] || 0, color: "hsl(var(--chart-5))" },
     ];
 
-    // Processar Popular Books
     const popularBooks = (popularBooksResponse.data ?? []).map((book: PopularBook) => ({
       id: book.id,
       title: book.title,
@@ -512,7 +508,6 @@ export const getAllDashboardData = cache(async () => {
       stock: book.stock,
     }));
 
-    // Processar Recent Loans
     const recentLoans = (recentLoansResponse.data as unknown as RawLoan[] ?? []).map((loan) => ({
       id: loan.id,
       book: loan.books?.title || "Livro desconhecido",
@@ -528,7 +523,7 @@ export const getAllDashboardData = cache(async () => {
       loanStatus,
       popularBooks,
       recentLoans,
-      libraryName, // Adicionamos o nome da biblioteca ao retorno
+      libraryName,
     };
   } catch (error) {
     console.error("Erro ao buscar todos os dados do dashboard:", error);

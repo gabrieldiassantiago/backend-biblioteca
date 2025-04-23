@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useState, useEffect } from "react"
 import { ClipboardList, BookOpen, User, Calendar, Clock, MoreVertical } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import Link from "next/link"
 
 interface RecentLoan {
   id: string
@@ -175,7 +176,9 @@ export function RecentLoansTable({ loans, loading }: { loans: RecentLoan[]; load
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/loans/${loan.id}`}>Ver detalhes</Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem>Renovar empréstimo</DropdownMenuItem>
                       <DropdownMenuItem>Marcar como devolvido</DropdownMenuItem>
                     </DropdownMenuContent>

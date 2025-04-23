@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useState, useEffect } from "react"
-import { TrendingUp, BookMarked } from "lucide-react"
+import { BookMarked, MoreVertical } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface PopularBook {
   id: string
@@ -31,9 +32,9 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
 
   const getAvailabilityColor = (available: number, stock: number) => {
     const ratio = available / stock
-    if (ratio > 0.7) return "bg-emerald-500"
-    if (ratio > 0.3) return "bg-amber-500"
-    return "bg-rose-500"
+    if (ratio > 0.7) return "bg-emerald-600"
+    if (ratio > 0.3) return "bg-amber-600"
+    return "bg-rose-600"
   }
 
   const renderMobileView = () => {
@@ -41,7 +42,7 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
       return (
         <div className="space-y-4">
           {[...Array(5)].map((_, i) => (
-            <Card key={i} className="p-4 border border-border">
+            <Card key={i} className="p-4 border border-gray-200 shadow-sm">
               <Skeleton className="h-6 w-3/4 mb-4" />
               <div className="grid grid-cols-2 gap-2">
                 <Skeleton className="h-4 w-full" />
@@ -60,25 +61,49 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
     return (
       <div className="space-y-4">
         {books.map((book) => (
-          <Card key={book.id} className="p-4 border-2">
-            <div className="font-medium text-lg mb-2 flex items-center gap-2">
-              <BookMarked className="h-4 w-4 text-primary" />
-              {book.title}
+          <Card
+            key={book.id}
+            className="p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="font-medium text-base flex items-center gap-2 text-gray-800">
+                <BookMarked className="h-4 w-4 text-indigo-600" />
+                {book.title}
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                    <MoreVertical className="h-4 w-4 text-gray-500" />
+                    <span className="sr-only">Menu de opções</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                  <DropdownMenuItem>Editar livro</DropdownMenuItem>
+                  <DropdownMenuItem>Adicionar estoque</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-base">
-              <div className="font-medium">Autor:</div>
-              <div>{book.author}</div>
-              <div className="font-medium">Empréstimos:</div>
-              <div className="font-bold">{book.loans}</div>
-              <div className="font-medium">Disponibilidade:</div>
-              <div className="flex items-center gap-2">
-                <Progress
-                  value={(book.available / book.stock) * 100}
-                  className={`h-3 w-16 ${getAvailabilityColor(book.available, book.stock)}`}
-                />
-                <span className="text-sm font-bold whitespace-nowrap">
-                  {book.available}/{book.stock}
-                </span>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="flex items-center gap-2 text-gray-700">
+                <span className="font-medium">Autor:</span>
+                {book.author}
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <span className="font-medium">Empréstimos:</span>
+                <span className="font-semibold">{book.loans}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <span className="font-medium">Disponibilidade:</span>
+                <div className="flex items-center gap-2">
+                  <Progress
+                    value={(book.available / book.stock) * 100}
+                    className={`h-3 w-16 ${getAvailabilityColor(book.available, book.stock)}`}
+                  />
+                  <span className="text-sm font-semibold">
+                    {book.available}/{book.stock}
+                  </span>
+                </div>
               </div>
             </div>
           </Card>
@@ -104,35 +129,51 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
     }
 
     return (
-      <div className="rounded-md border-2">
+      <div className="rounded-md border border-gray-200 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/30">
+          <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="text-base font-bold">Título</TableHead>
-              <TableHead className="text-base font-bold">Autor</TableHead>
-              <TableHead className="text-base font-bold">Empréstimos</TableHead>
-              <TableHead className="text-base font-bold">Disponibilidade</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Título</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Autor</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Empréstimos</TableHead>
+              <TableHead className="text-sm font-medium text-gray-700">Disponibilidade</TableHead>
+              <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {books.map((book) => (
-              <TableRow key={book.id} className="hover:bg-muted/30">
-                <TableCell className="font-medium text-base flex items-center gap-2">
-                  <BookMarked className="h-4 w-4 text-primary" />
+              <TableRow key={book.id} className="hover:bg-gray-50 transition-colors duration-150">
+                <TableCell className="font-medium text-sm flex items-center gap-2 text-gray-800">
+                  <BookMarked className="h-4 w-4 text-indigo-600" />
                   {book.title}
                 </TableCell>
-                <TableCell className="text-base">{book.author}</TableCell>
-                <TableCell className="font-bold text-base">{book.loans}</TableCell>
+                <TableCell className="text-sm text-gray-700">{book.author}</TableCell>
+                <TableCell className="text-sm font-semibold text-gray-700">{book.loans}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2 min-w-[120px]">
                     <Progress
                       value={(book.available / book.stock) * 100}
                       className={`h-3 ${getAvailabilityColor(book.available, book.stock)}`}
                     />
-                    <span className="text-sm font-bold whitespace-nowrap">
+                    <span className="text-sm font-semibold">
                       {book.available}/{book.stock}
                     </span>
                   </div>
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                        <MoreVertical className="h-4 w-4 text-gray-500" />
+                        <span className="sr-only">Menu de opções</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                      <DropdownMenuItem>Editar livro</DropdownMenuItem>
+                      <DropdownMenuItem>Adicionar estoque</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -143,18 +184,36 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
   }
 
   return (
-    <Card className="border-2">
+    <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl font-bold">Livros Mais Populares</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-indigo-100 p-2">
+              <BookMarked className="h-5 w-5 text-indigo-700" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold text-gray-800">Livros Mais Populares</CardTitle>
+              <CardDescription className="text-xs text-gray-500 mt-0.5">
+                Os 5 livros mais emprestados da biblioteca
+              </CardDescription>
+            </div>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                <MoreVertical className="h-4 w-4 text-gray-500" />
+                <span className="sr-only">Menu de opções</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Exportar como CSV</DropdownMenuItem>
+              <DropdownMenuItem>Ver todos os livros</DropdownMenuItem>
+              <DropdownMenuItem>Atualizar dados</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <CardDescription className="text-base mt-1">Os 5 livros mais emprestados da biblioteca</CardDescription>
       </CardHeader>
       <CardContent>{isMobile ? renderMobileView() : renderDesktopView()}</CardContent>
     </Card>
   )
 }
-

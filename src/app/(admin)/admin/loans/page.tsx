@@ -169,7 +169,7 @@ async function LoansTable({ page, statusFilter }: { page: number; statusFilter: 
   }
 
   // Log pra debug
-  console.log("Dados brutos do Supabase:", JSON.stringify(loans, null, 2));
+  //console.log("Dados brutos do Supabase:", JSON.stringify(loans, null, 2));
 
   const formattedLoans: FormattedLoan[] = await Promise.all(
     (loans || []).map(async (loan: RawLoan) => {

@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@radix-ui/react-dropdown-menu"
 import { redirect } from "next/navigation"
+import { Badge } from "@/components/ui/badge"
+import { getUserLibraryId } from "./loans/actions"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -18,18 +20,47 @@ export default async function AdminLayout({
   children: ReactNode
 }) {
   const supabase = await createClient()
-  // Obter dados do usuário autenticado
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let libraryId;
+  try {
+    libraryId = await getUserLibraryId();
+  } catch (error) {
+    console.error("Erro ao obter libraryId:", error);
+    libraryId = null; 
+  }
+  
   const { data: userData } = await supabase
     .from("users")
-    .select("name, email")
+    .select("name, email, library_id, role")
     .eq("id", user?.id)
     .single()
 
+    //pegar nome da biblioteca
+  const { data: libraryData } = await supabase
+    .from("libraries")
+    .select("name")
+    .eq("id", libraryId)
+    .single()
+
+  const libraryName = libraryData?.name || ''
+
   const userName = userData?.name || user?.email?.split('@')[0] || 'Administrador'
-  const userEmail = userData?.email || user?.email || ''
-  
-  // Obter iniciais para o avatar
+  const userRole = userData?.role || 'Adminstrador'
+
+
+  let recentLoansCount = 0
+  if (libraryId) {
+  const { count } = await supabase
+    .from("loans")
+    .select("*", { count: "exact", head: true })
+    .eq("library_id", libraryId)
+    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .eq("status", "pending")
+
+  recentLoansCount = count || 0
+}
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -38,30 +69,31 @@ export default async function AdminLayout({
       .toUpperCase()
       .substring(0, 2)
   }
-  
-  
 
   async function handleLogout() {
     "use server"
     const supabase = await createClient()
     await supabase.auth.signOut()
     redirect("/login")
-    
   }
 
   const menuItems = [
     { href: "/admin", icon: Home, label: "Dashboard", description: "Visão geral da biblioteca" },
     { href: "/admin/books", icon: Book, label: "Gerenciar Livros", description: "Adicionar, editar e remover livros" },
-    { href: "/admin/loans", icon: BookOpen, label: "Empréstimos", description: "Gerenciar empréstimos e devoluções" },
+    { 
+      href: "/admin/loans", 
+      icon: BookOpen, 
+      label: "Empréstimos", 
+      description: "Gerenciar empréstimos e devoluções",
+      badge: recentLoansCount ? <Badge variant="destructive">{recentLoansCount}</Badge> : null
+    },
     { href: "/admin/users", icon: User, label: "Alunos", description: "Gerenciar cadastros de alunos" },
     { href: "/admin/chat", icon: MessageCircle, label: "Chat IA", description: "Use IA para automatizar suas tarefas" },
     { href: "/admin/settings", icon: Settings, label: "Configurações", description: "Configurações da biblioteca" },
-
   ]
 
   return (
     <div className={`${inter.className} antialiased bg-background flex flex-col min-h-screen`}>
-      {/* Mobile Header */}
       <header className="lg:hidden flex items-center justify-between p-4 bg-card border-b shadow-sm">
         <Sheet>
           <SheetTrigger asChild>
@@ -90,8 +122,8 @@ export default async function AdminLayout({
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-muted-foreground">{userEmail}</p>
+                  <p className="text-sm font-medium">{libraryName}</p>
+                  <p className="text-xs text-muted-foreground">{userRole}</p>
                 </div>
               </div>
             </div>
@@ -164,8 +196,8 @@ export default async function AdminLayout({
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-0.5">
-                <p className="text-sm font-medium">{userName}</p>
-                <p className="text-xs text-muted-foreground">{userEmail}</p>
+                <p className="text-sm font-medium">{libraryName}</p>
+                <p className="text-xs text-muted-foreground">{userRole}</p>
               </div>
             </div>
           </div>
@@ -231,6 +263,7 @@ interface NavItemProps {
     icon: React.ComponentType<{ className?: string }>
     label: string
     description?: string
+    badge?: ReactNode
   }
 }
 
@@ -254,8 +287,11 @@ function NavItem({ item }: NavItemProps) {
         "h-5 w-5 transition-colors",
         isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
       )} />
-      <div className="flex flex-col">
-        <span>{item.label}</span>
+      <div className="flex flex-col flex-1">
+        <div className="flex items-center gap-2">
+          <span>{item.label}</span>
+          {item.badge}
+        </div>
         {item.description && (
           <span className="text-xs text-muted-foreground group-hover:text-muted-foreground/80">
             {item.description}
@@ -282,13 +318,16 @@ function MobileNavItem({ item }: NavItemProps) {
           : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
-      <div className="flex items-center gap-x-3">
+      <div className="flex items-center gap-x-3 flex-1">
         <item.icon className={cn(
           "h-5 w-5 transition-colors",
           isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
         )} />
-        <div className="flex flex-col">
-          <span>{item.label}</span>
+        <div className="flex flex-col flex-1">
+          <div className="flex items-center gap-2">
+            <span>{item.label}</span>
+            {item.badge}
+          </div>
           {item.description && (
             <span className="text-xs text-muted-foreground group-hover:text-muted-foreground/80">
               {item.description}

@@ -1,20 +1,44 @@
-import { createClient } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, User, Users, AlertCircle } from "lucide-react"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Suspense } from "react"
+import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal, Eye, Search } from "lucide-react";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Input } from "@/components/ui/input";
 
-// Skeleton components (unchanged)
-function TableSkeleton() {
+// Interfaces
+interface RawUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  created_at: string;
+  class: string | null;
+  grade: string | null;
+  library_id: string;
+}
+
+interface FormattedUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  created_at: string;
+  class: string;
+  grade: string;
+}
+
+// Skeleton
+function UsersListSkeleton() {
   return (
-    <div className="hidden md:block rounded-lg border bg-card shadow-sm overflow-hidden">
+    <div className="rounded-md border">
       <Table>
-        <TableHeader className="bg-muted/50">
+        <TableHeader>
           <TableRow>
             <TableHead>Nome Completo</TableHead>
             <TableHead>Email</TableHead>
@@ -22,386 +46,71 @@ function TableSkeleton() {
             <TableHead>Série/Ano</TableHead>
             <TableHead>Cargo</TableHead>
             <TableHead>Data de Criação</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {Array.from({ length: 5 }).map((_, index) => (
-            <TableRow key={index} className="animate-pulse">
-              <TableCell>
-                <Skeleton className="h-5 w-[180px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[200px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[80px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[100px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[100px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[120px]" />
-              </TableCell>
+            <TableRow key={index}>
+              <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+              <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
 
-function CardSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-4 md:hidden">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <Card key={index} className="overflow-hidden animate-pulse">
-          <CardHeader className="pb-2 bg-muted/30">
-            <div className="flex justify-between items-start">
-              <Skeleton className="h-6 w-[150px]" />
-              <Skeleton className="h-5 w-[100px]" />
-            </div>
-          </CardHeader>
-          <CardContent className="pb-4 pt-3">
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
+// Tipagem ajustada pra Promise
+interface UsersPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-function PaginationSkeleton() {
-  return (
-    <div className="flex justify-center mt-6">
-      <div className="flex items-center space-x-1">
-        <Skeleton className="h-9 w-20 hidden sm:block" />
-        <div className="flex space-x-1">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className="h-9 w-9 rounded-md" />
-          ))}
-        </div>
-        <Skeleton className="h-9 w-20 hidden sm:block" />
-      </div>
-    </div>
-  )
-}
+export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
+  // Resolve a Promise dos searchParams
+  const resolvedSearchParams = await searchParams;
+  const page = Math.max(1, Number.parseInt((resolvedSearchParams.page as string) || "1", 10));
+  const searchQuery = (resolvedSearchParams.search as string) || "";
+  const roleFilter = (resolvedSearchParams.role as string) || "all";
 
-async function StudentsContent({ searchParams }: { searchParams: Promise<{ search?: string; page?: string }> }) {
-  const supabase = await createClient()
-
-  const formatarRole = (role: string) => {
-    switch (role) {
-      case "student":
-        return "Estudante"
-      case "admin":
-        return "Administrador"
-      default:
-        return role
+  async function handleSearch(formData: FormData) {
+    "use server";
+    const search = formData.get("search") as string;
+    const newParams = new URLSearchParams({ page: "1" });
+    if (search) {
+      newParams.set("search", search);
     }
-  }
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    console.log("Erro na autenticação ou usuário não encontrado:", authError?.message || "Sessão ausente")
-    return null
-  }
-
-  const roleFromMetadata = user.user_metadata?.role
-  let role = roleFromMetadata
-
-  if (!roleFromMetadata) {
-    const { data: userData, error: userError } = await supabase.from("users").select("role").eq("id", user.id).single()
-
-    if (userError || !userData?.role) {
-      console.log("Erro ao buscar role ou role não encontrado:", userError?.message || "Dados ausentes")
-      return null
+    if (roleFilter && roleFilter !== "all") {
+      newParams.set("role", roleFilter);
     }
-    role = userData.role
+    redirect(`/admin/users?${newParams.toString()}`);
   }
 
-  if (role !== "admin") {
-    console.log("Acesso negado - Role do usuário:", role)
-    return null
+  async function handleRoleFilter(formData: FormData) {
+    "use server";
+    const role = formData.get("role") as string;
+    const newParams = new URLSearchParams({ page: "1" });
+    if (role && role !== "all") {
+      newParams.set("role", role);
+    }
+    if (searchQuery) {
+      newParams.set("search", searchQuery);
+    }
+    redirect(`/admin/users?${newParams.toString()}`);
   }
-
-  const { data: userLibrary, error: libraryError } = await supabase
-    .from("users")
-    .select("library_id")
-    .eq("id", user.id)
-    .single()
-
-  if (libraryError || !userLibrary?.library_id) {
-    console.log("Erro ao buscar library_id:", libraryError?.message || "Dados ausentes")
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-red-200 bg-red-50 shadow-sm animate-in fade-in">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <div className="p-3 bg-red-100 rounded-full">
-                <AlertCircle className="h-10 w-10 text-red-500" />
-              </div>
-              <h3 className="text-xl font-semibold text-red-700">Erro de Configuração</h3>
-              <p className="text-red-600 max-w-md">Biblioteca não associada ao administrador. Contate o suporte.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const libraryId = userLibrary.library_id
-
-  const params = await searchParams
-  const searchQuery = params.search || ""
-  const page = Number.parseInt(params.page || "1", 10)
-  const limit = 10
-  const offset = (page - 1) * limit
-
-  let query = supabase
-    .from("users")
-    .select("id, full_name, email, role, created_at, class, grade", { count: "exact" })
-    .eq("library_id", libraryId)
-    .eq("role", "student")
-
-  if (searchQuery) {
-    query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
-  }
-
-  const { data: students, error: studentsError, count } = await query.range(offset, offset + limit - 1)
-
-  if (studentsError) {
-    console.error("Erro ao listar alunos:", studentsError.message)
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <AlertCircle className="h-12 w-12 text-red-500" />
-              <h3 className="text-xl font-semibold text-red-700">Erro ao Carregar Dados</h3>
-              <p className="text-red-600">{studentsError.message}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const totalPages = Math.ceil((count || 0) / limit)
 
   return (
-    <>
-      {searchQuery && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <span>Resultados para:</span>
-          <Badge variant="secondary" className="font-normal">
-            {searchQuery}
-          </Badge>
-          <span>({count || 0} encontrados)</span>
-        </div>
-      )}
-
-      <div className="hidden md:block rounded-lg border bg-card shadow-sm overflow-hidden transition-all hover:shadow-md">
-        <Table>
-          <TableHeader className="bg-muted/50 sticky top-0">
-            <TableRow>
-              <TableHead className="font-semibold">Nome Completo</TableHead>
-              <TableHead className="font-semibold">Email</TableHead>
-              <TableHead className="font-semibold">Turma</TableHead>
-              <TableHead className="font-semibold">Série/Ano</TableHead>
-              <TableHead className="font-semibold">Cargo</TableHead>
-              <TableHead className="font-semibold">Data de Criação</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students && students.length > 0 ? (
-              students.map((student) => (
-                <TableRow key={student.id} className="hover:bg-muted/50 transition-colors cursor-pointer">
-                  <Link href={`/admin/users/${student.id}`} className="contents">
-                    <TableCell className="font-medium">{student.full_name}</TableCell>
-                    <TableCell>{student.email}</TableCell>
-                    <TableCell>{student.class || "-"}</TableCell>
-                    <TableCell>{student.grade || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-primary/10 text-primary">
-                        {formatarRole(student.role)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(student.created_at).toLocaleDateString("pt-BR")}</TableCell>
-                  </Link>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  <div className="flex flex-col items-center justify-center space-y-2 py-6 text-muted-foreground">
-                    <User className="h-12 w-12 text-muted-foreground/50" />
-                    <p>Nenhum aluno encontrado.</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:hidden">
-        {students && students.length > 0 ? (
-          students.map((student) => (
-            <Link href={`/admin/users/${student.id}`} key={student.id} className="block">
-              <Card className="overflow-hidden border-primary/10 transition-all hover:shadow-md hover:border-primary/20">
-                <CardHeader className="pb-2 bg-muted/30">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg line-clamp-1">{student.full_name}</CardTitle>
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {formatarRole(student.role)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4 pt-3">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Email:</span>
-                      <span className="font-medium truncate">{student.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Turma:</span>
-                      <span>{student.class || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Série:</span>
-                      <span>{student.grade || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Criado em:</span>
-                      <span>{new Date(student.created_at).toLocaleDateString("pt-BR")}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))
-        ) : (
-          <Card className="p-6 text-center border-dashed">
-            <div className="flex flex-col items-center justify-center space-y-2 py-6">
-              <User className="h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">Nenhum aluno encontrado.</p>
-            </div>
-          </Card>
-        )}
-      </div>
-
-      {totalPages > 0 && (
-        <div className="flex justify-center mt-6">
-          <nav
-            className="flex items-center space-x-1 bg-background/80 backdrop-blur-sm p-1 rounded-lg border shadow-sm"
-            aria-label="Navegação de páginas"
-          >
-            <Button variant="outline" size="sm" disabled={page <= 1} asChild className="hidden sm:flex">
-              <Link
-                href={`/admin/users?page=${page - 1}&search=${encodeURIComponent(searchQuery)}`}
-                className="transition-all"
-              >
-                Anterior
-              </Link>
-            </Button>
-
-            <div className="flex items-center space-x-1">
-              {Array.from({ length: totalPages }, (_, i) => {
-                const pageNum = i + 1
-                const showPage = pageNum === 1 || pageNum === totalPages || (pageNum >= page - 1 && pageNum <= page + 1)
-
-                const showEllipsisBefore = i === 1 && page > 3
-                const showEllipsisAfter = i === totalPages - 2 && page < totalPages - 2
-
-                if (showEllipsisBefore) {
-                  return (
-                    <span key="ellipsis-before" className="px-3 py-2 text-sm text-muted-foreground">
-                      ...
-                    </span>
-                  )
-                }
-
-                if (showEllipsisAfter) {
-                  return (
-                    <span key="ellipsis-after" className="px-3 py-2 text-sm text-muted-foreground">
-                      ...
-                    </span>
-                  )
-                }
-
-                if (showPage) {
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={page === pageNum ? "default" : "outline"}
-                      size="icon"
-                      className={`w-9 h-9 transition-all ${page === pageNum ? "animate-pulse-light" : ""}`}
-                      asChild
-                    >
-                      <Link
-                        href={`/admin/users?page=${pageNum}&search=${encodeURIComponent(searchQuery)}`}
-                        aria-current={page === pageNum ? "page" : undefined}
-                      >
-                        {pageNum}
-                      </Link>
-                    </Button>
-                  )
-                }
-
-                return null
-              })}
-            </div>
-
-            <Button variant="outline" size="sm" disabled={page >= totalPages} asChild className="hidden sm:flex">
-              <Link
-                href={`/admin/users?page=${page + 1}&search=${encodeURIComponent(searchQuery)}`}
-                className="transition-all"
-              >
-                Próxima
-              </Link>
-            </Button>
-          </nav>
-        </div>
-      )}
-    </>
-  )
-}
-
-export default async function AdminUsersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ search?: string; page?: string }>
-}) {
-  // Await searchParams to resolve it
-  const params = await searchParams
-  const searchQuery = params.search || ""
-
-  return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 top-0 z-10 py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-primary/10">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Alunos da Biblioteca</h1>
-          </div>
-
-          <form action="/admin/users" method="GET" className="w-full sm:w-auto">
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Alunos da Biblioteca</h1>
+        <div className="flex items-center gap-4">
+          <form action={handleSearch} className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -409,42 +118,209 @@ export default async function AdminUsersPage({
                 placeholder="Buscar por nome ou email..."
                 name="search"
                 defaultValue={searchQuery}
-                className="pl-10 w-full sm:w-[300px] bg-background border-primary/20 focus-visible:ring-primary/30"
+                className="pl-10 w-[200px] sm:w-[300px] bg-background border-primary/20 focus-visible:ring-primary/30"
               />
-              <Button
-                type="submit"
-                size="sm"
-                variant="ghost"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 hover:bg-primary/10"
-              >
-                Buscar
-              </Button>
             </div>
+            <Button type="submit" variant="outline">Buscar</Button>
           </form>
+          <form action={handleRoleFilter} className="flex items-center gap-2">
+            <Select name="role" defaultValue={roleFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="student">Estudante</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit" variant="outline">Filtrar</Button>
+          </form>
+          
         </div>
-
-        {searchQuery && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-in fade-in">
-            <span>Resultados para:</span>
-            <Badge variant="secondary" className="font-normal">
-              {searchQuery}
-            </Badge>
-          </div>
-        )}
       </div>
-
-      <Suspense
-        fallback={
-          <>
-            <TableSkeleton />
-            <CardSkeleton />
-            <PaginationSkeleton />
-          </>
-        }
-      >
-        <StudentsContent searchParams={searchParams} />
+      <Suspense fallback={<UsersListSkeleton />}>
+        <UsersTable page={page} searchQuery={searchQuery} roleFilter={roleFilter} />
       </Suspense>
     </div>
-  )
+  );
 }
 
+async function UsersTable({ page, searchQuery, roleFilter }: { page: number; searchQuery: string; roleFilter: string }) {
+  const supabase = await createClient();
+  const pageSize = 10;
+  const offset = (page - 1) * pageSize;
+
+  // Verificar autenticação e permissões
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("Erro na autenticação ou usuário não encontrado");
+  }
+
+  const roleFromMetadata = user.user_metadata?.role;
+  let role = roleFromMetadata;
+
+  if (!roleFromMetadata) {
+    const { data: userData, error: userError } = await supabase.from("users").select("role").eq("id", user.id).single();
+    if (userError || !userData?.role) {
+      throw new Error("Erro ao buscar role ou role não encontrado");
+    }
+    role = userData.role;
+  }
+
+  if (role !== "admin") {
+    throw new Error("Acesso negado: apenas administradores podem acessar esta página");
+  }
+
+  const { data: userLibrary, error: libraryError } = await supabase
+    .from("users")
+    .select("library_id")
+    .eq("id", user.id)
+    .single();
+
+  if (libraryError || !userLibrary?.library_id) {
+    throw new Error("Biblioteca não associada ao administrador");
+  }
+
+  const libraryId = userLibrary.library_id;
+
+  // Contagem
+  let countQuery = supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId);
+  if (searchQuery) {
+    countQuery = countQuery.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+  }
+  if (roleFilter !== "all") {
+    countQuery = countQuery.eq("role", roleFilter);
+  }
+  const { count } = await countQuery;
+
+  // Busca
+  let usersQuery = supabase
+    .from("users")
+    .select("id, full_name, email, role, created_at, class, grade, library_id")
+    .eq("library_id", libraryId);
+
+  if (searchQuery) {
+    usersQuery = usersQuery.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+  }
+  if (roleFilter !== "all") {
+    usersQuery = usersQuery.eq("role", roleFilter);
+  }
+
+  const { data: users, error } = await usersQuery
+    .range(offset, offset + pageSize - 1)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error("Erro ao carregar usuários: " + error.message);
+  }
+
+  const formattedUsers: FormattedUser[] = (users || []).map((user: RawUser) => ({
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    created_at: user.created_at,
+    class: user.class || "-",
+    grade: user.grade || "-",
+  }));
+
+  const totalPages = Math.ceil((count || 0) / pageSize);
+
+  const formatarRole = (role: string) => {
+    switch (role) {
+      case "student":
+        return "Estudante";
+      case "admin":
+        return "Administrador";
+      default:
+        return role;
+    }
+  };
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nome Completo</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Turma</TableHead>
+            <TableHead>Série/Ano</TableHead>
+            <TableHead>Cargo</TableHead>
+            <TableHead>Data de Criação</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {formattedUsers.length > 0 ? (
+            formattedUsers.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.full_name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>{user.class}</TableCell>
+                <TableCell>{user.grade}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={user.role === "student" ? "default" : "secondary"}
+                  >
+                    {formatarRole(user.role)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{new Date(user.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <Link href={`/admin/users/${user.id}`}>
+                        <DropdownMenuItem className="cursor-pointer">
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalhes
+                        </DropdownMenuItem>
+                      </Link>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-4">
+                Nenhum usuário registrado
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      {totalPages > 0 && (
+       // Paginação
+       <div className="flex items-center justify-between px-2 p-6">
+          <div className="text-sm text-muted-foreground">
+            Página {page} de {totalPages}
+          </div>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" asChild disabled={page <= 1} className="h-9 px-4">
+              <Link href={`/admin/users?page=${page > 1 ? page - 1 : 1}${searchQuery ? `&search=${searchQuery}` : ""}`}>
+                Anterior
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild disabled={page >= totalPages} className="h-9 px-4">
+              <Link href={`/admin/users?page=${page < totalPages ? page + 1 : totalPages}${searchQuery ? `&search=${searchQuery}` : ""}`}>
+                Próxima
+              </Link>
+            </Button>
+          </div>
+        </div>
+        
+      )}
+    </div>
+  );
+}

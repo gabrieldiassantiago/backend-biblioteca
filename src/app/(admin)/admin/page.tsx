@@ -60,20 +60,18 @@ const initialStats: DashboardStat[] = [
 
 // Componente principal do Dashboard
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<DashboardStat[]>(initialStats)
-  const [monthlyLoans, setMonthlyLoans] = useState<MonthlyLoanData[]>([])
-  const [loanStatus, setLoanStatus] = useState<LoanStatusData[]>([])
-  const [popularBooks, setPopularBooks] = useState<PopularBook[]>([])
-  const [recentLoans, setRecentLoans] = useState<RecentLoan[]>([])
-  const [libraryName, setLibraryName] = useState<string>("...")
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStat[]>(initialStats);
+  const [monthlyLoans, setMonthlyLoans] = useState<MonthlyLoanData[]>([]);
+  const [loanStatus, setLoanStatus] = useState<LoanStatusData[]>([]);
+  const [popularBooks, setPopularBooks] = useState<PopularBook[]>([]);
+  const [recentLoans, setRecentLoans] = useState<RecentLoan[]>([]);
+  const [libraryName, setLibraryName] = useState<string>("...");
+  const [loading, setLoading] = useState(true);
 
-  // Função para buscar dados
   const fetchDashboardData = async () => {
     try {
-      const data = await getAllDashboardData()
+      const data = await getAllDashboardData();
 
-      // Atualizar com cores mais vibrantes para o gráfico de status
       const updatedLoanStatus = data.loanStatus.map((status, index) => {
         const colors = [
           "#4338ca", // indigo-700
@@ -81,12 +79,12 @@ export default function AdminDashboardPage() {
           "#e11d48", // rose-600
           "#d97706", // amber-600
           "#7c3aed", // violet-600
-        ]
+        ];
         return {
           ...status,
           color: colors[index % colors.length],
-        }
-      })
+        };
+      });
 
       setStats([
         {
@@ -96,8 +94,8 @@ export default function AdminDashboardPage() {
           trend: `${data.stats.booksTrend > 0 ? "+" : ""}${data.stats.booksTrend}%`,
         },
         {
-          title: "Usuários Ativos",
-          value: data.stats.activeUsers.toString(),
+          title: "Total de Usuários", // Alterado de "Usuários Ativos"
+          value: data.stats.totalUsers.toString(), // Alterado de activeUsers
           icon: Users,
           trend: `${data.stats.usersTrend > 0 ? "+" : ""}${data.stats.usersTrend}%`,
         },
@@ -107,23 +105,23 @@ export default function AdminDashboardPage() {
           icon: BookOpen,
           trend: `${data.stats.loansTrend > 0 ? "+" : ""}${data.stats.loansTrend}%`,
         },
-      ])
-      setMonthlyLoans(data.monthlyLoans)
-      setLoanStatus(updatedLoanStatus)
-      setPopularBooks(data.popularBooks)
-      setRecentLoans(data.recentLoans)
-      setLibraryName(data.libraryName || "Biblioteca Sem Nome")
+      ]);
+      setMonthlyLoans(data.monthlyLoans);
+      setLoanStatus(updatedLoanStatus);
+      setPopularBooks(data.popularBooks);
+      setRecentLoans(data.recentLoans);
+      setLibraryName(data.libraryName || "Biblioteca Sem Nome");
     } catch (error) {
-      console.error("Erro ao carregar dados do dashboard:", error)
-      setLibraryName("Erro ao carregar nome")
+      console.error("Erro ao carregar dados do dashboard:", error);
+      setLibraryName("Erro ao carregar nome");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    fetchDashboardData();
+  }, []);
 
   const container = {
     hidden: { opacity: 0 },

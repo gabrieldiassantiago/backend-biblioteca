@@ -145,6 +145,7 @@ export async function updateLibrarySettings(settings: LibrarySettings) {
       name: settings.libraryName,
       contact_email: settings.contactEmail,
       location: settings.location,
+      slug: settings.librarySlug,
     })
     .eq("id", userData.library_id);
 
