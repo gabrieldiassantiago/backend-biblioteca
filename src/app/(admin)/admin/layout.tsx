@@ -27,7 +27,7 @@ export default async function AdminLayout({
     libraryId = await getUserLibraryId();
   } catch (error) {
     console.error("Erro ao obter libraryId:", error);
-    libraryId = null; 
+    libraryId = null;
   }
   
   const { data: userData } = await supabase
@@ -36,7 +36,6 @@ export default async function AdminLayout({
     .eq("id", user?.id)
     .single()
 
-    //pegar nome da biblioteca
   const { data: libraryData } = await supabase
     .from("libraries")
     .select("name")
@@ -44,22 +43,19 @@ export default async function AdminLayout({
     .single()
 
   const libraryName = libraryData?.name || ''
-
   const userName = userData?.name || user?.email?.split('@')[0] || 'Administrador'
-  const userRole = userData?.role || 'Adminstrador'
-
+  const userRole = userData?.role || 'Administrador'
 
   let recentLoansCount = 0
   if (libraryId) {
-  const { count } = await supabase
-    .from("loans")
-    .select("*", { count: "exact", head: true })
-    .eq("library_id", libraryId)
-    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    .eq("status", "pending")
-
-  recentLoansCount = count || 0
-}
+    const { count } = await supabase
+      .from("loans")
+      .select("*", { count: "exact", head: true })
+      .eq("library_id", libraryId)
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .eq("status", "pending")
+    recentLoansCount = count || 0
+  }
 
   const getInitials = (name: string) => {
     return name
@@ -85,7 +81,7 @@ export default async function AdminLayout({
       icon: BookOpen, 
       label: "Empréstimos", 
       description: "Gerenciar empréstimos e devoluções",
-      badge: recentLoansCount ? <Badge variant="destructive">{recentLoansCount}</Badge> : null
+      badge: recentLoansCount ? <Badge variant="destructive" className="ml-2">{recentLoansCount}</Badge> : null
     },
     { href: "/admin/users", icon: User, label: "Alunos", description: "Gerenciar cadastros de alunos" },
     { href: "/admin/chat", icon: MessageCircle, label: "Chat IA", description: "Use IA para automatizar suas tarefas" },
@@ -93,47 +89,47 @@ export default async function AdminLayout({
   ]
 
   return (
-    <div className={`${inter.className} antialiased bg-background flex flex-col min-h-screen`}>
-      <header className="lg:hidden flex items-center justify-between p-4 bg-card border-b shadow-sm">
+    <div className={`${inter.className} antialiased bg-gray-50 flex flex-col min-h-screen transition-colors duration-300`}>
+      <header className="lg:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm sticky top-0 z-10">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-900 transition-colors">
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-80 p-0">
-            <div className="h-16 flex items-center px-6 border-b bg-gradient-to-r from-primary/10 to-background">
+          <SheetContent side="left" className="w-80 p-0 bg-white">
+            <div className="h-16 flex items-center px-6 border-b bg-gradient-to-r from-indigo-50 to-white">
               <Link href="/admin" className="flex items-center space-x-2">
-                <div className="bg-primary/10 p-1 rounded-md">
-                  <Library className="h-6 w-6 text-primary" />
+                <div className="bg-indigo-100 p-1.5 rounded-lg">
+                  <Library className="h-6 w-6 text-indigo-600" />
                 </div>
-                <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
+                <span className="text-xl font-bold text-indigo-700">
                   Biblioteca Digital
                 </span>
               </Link>
             </div>
             
-            <div className="p-4 border-b bg-muted/30">
+            <div className="p-4 border-b bg-gray-50">
               <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10 border-2 border-primary/20">
+                <Avatar className="h-12 w-12 border-2 border-indigo-200 transition-transform hover:scale-105">
                   <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
+                  <AvatarFallback className="bg-indigo-100 text-indigo-600 text-sm font-medium">
                     {getInitials(userName)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium">{libraryName}</p>
-                  <p className="text-xs text-muted-foreground">{userRole}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-gray-900">{libraryName}</p>
+                  <p className="text-xs text-gray-500">{userRole}</p>
                 </div>
               </div>
             </div>
             
             <nav className="flex-1 overflow-y-auto py-4">
               <div className="px-3 py-2">
-                <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Menu Principal
                 </h3>
-                <div className="space-y-1 mt-2">
+                <div className="space-y-1 mt-3">
                   {menuItems.map((item) => (
                     <MobileNavItem key={item.href} item={item} />
                   ))}
@@ -141,12 +137,12 @@ export default async function AdminLayout({
               </div>
             </nav>
             
-            <div className="p-4 border-t">
+            <div className="p-4 border-t bg-gray-50">
               <form action={handleLogout}>
                 <Button
                   type="submit"
                   variant="outline"
-                  className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-destructive hover:border-destructive/30"
+                  className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                   Encerrar Sessão
@@ -157,17 +153,17 @@ export default async function AdminLayout({
         </Sheet>
         
         <Link href="/admin" className="flex items-center space-x-2">
-          <div className="bg-primary/10 p-1 rounded-md">
-            <Library className="h-5 w-5 text-primary" />
+          <div className="bg-indigo-100 p-1.5 rounded-lg">
+            <Library className="h-5 w-5 text-indigo-600" />
           </div>
-          <span className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
+          <span className="text-lg font-bold text-indigo-700">
             Biblioteca Digital
           </span>
         </Link>
         
-        <Avatar className="h-8 w-8 border border-primary/20">
+        <Avatar className="h-9 w-9 border-2 border-indigo-200 transition-transform hover:scale-105">
           <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
-          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+          <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-medium">
             {getInitials(userName)}
           </AvatarFallback>
         </Avatar>
@@ -175,29 +171,29 @@ export default async function AdminLayout({
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar (Desktop) */}
-        <aside className="hidden lg:flex lg:flex-col w-64 bg-card border-r shadow-sm">
-          <div className="h-16 flex items-center px-6 border-b bg-gradient-to-r from-primary/10 to-background">
+        <aside className="hidden lg:flex lg:flex-col w-72 bg-white border-r shadow-lg">
+          <div className="h-16 flex items-center px-6 border-b bg-gradient-to-r from-indigo-50 to-white sticky top-0 z-10">
             <Link href="/admin" className="flex items-center space-x-2">
-              <div className="bg-primary/10 p-1 rounded-md">
-                <Library className="h-6 w-6 text-primary" />
+              <div className="bg-indigo-100 p-1.5 rounded-lg">
+                <Library className="h-6 w-6 text-indigo-600" />
               </div>
-              <span className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
+              <span className="text-xl font-bold text-indigo-700">
                 Biblioteca Digital
               </span>
             </Link>
           </div>
           
-          <div className="p-4 border-b bg-muted/30">
+          <div className="p-4 border-b bg-gray-50">
             <div className="flex items-center space-x-3">
-              <Avatar className="h-10 w-10 border-2 border-primary/20">
+              <Avatar className="h-12 w-12 border-2 border-indigo-200 transition-transform hover:scale-105">
                 <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
-                <AvatarFallback className="bg-primary/10 text-primary">
+                <AvatarFallback className="bg-indigo-100 text-indigo-600 text-sm font-medium">
                   {getInitials(userName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">{libraryName}</p>
-                <p className="text-xs text-muted-foreground">{userRole}</p>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-gray-900 truncate max-w-[160px]">{libraryName}</p>
+                <p className="text-xs text-gray-500">{userRole}</p>
               </div>
             </div>
           </div>
@@ -205,7 +201,7 @@ export default async function AdminLayout({
           <nav className="flex-1 overflow-y-auto py-6">
             <div className="px-3 space-y-6">
               <div>
-                <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
                   Menu Principal
                 </h3>
                 <div className="space-y-1">
@@ -216,8 +212,8 @@ export default async function AdminLayout({
               </div>
               
               <div>
-                <Separator className="my-4 bg-border/60" />
-                <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                <Separator className="my-4 bg-gray-200" />
+                <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
                   Recursos
                 </h3>
                 <div className="space-y-1">
@@ -234,12 +230,12 @@ export default async function AdminLayout({
             </div>
           </nav>
           
-          <div className="p-4 border-t">
+          <div className="p-4 border-t bg-gray-50 sticky bottom-0">
             <form action={handleLogout}>
               <Button
                 type="submit"
                 variant="outline"
-                className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
+                className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors duration-200"
               >
                 <LogOut className="h-4 w-4" />
                 Encerrar Sessão
@@ -249,8 +245,8 @@ export default async function AdminLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-background">
-          <div className="container mx-auto px-4 py-8">{children}</div>
+        <main className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="container mx-auto px-6 py-10">{children}</div>
         </main>
       </div>
     </div>
@@ -277,23 +273,23 @@ function NavItem({ item }: NavItemProps) {
     <Link
       href={item.href}
       className={cn(
-        "group flex items-center gap-x-3 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+        "group flex items-center gap-x-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200 ease-in-out",
         isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? "bg-indigo-100 text-indigo-700 shadow-sm"
+          : "text-gray-600 hover:bg-gray-100 hover:text-indigo-700 hover:shadow-sm"
       )}
     >
       <item.icon className={cn(
-        "h-5 w-5 transition-colors",
-        isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+        "h-5 w-5 transition-colors duration-200",
+        isActive ? "text-indigo-700" : "text-gray-500 group-hover:text-indigo-700"
       )} />
       <div className="flex flex-col flex-1">
         <div className="flex items-center gap-2">
-          <span>{item.label}</span>
+          <span className="font-semibold">{item.label}</span>
           {item.badge}
         </div>
         {item.description && (
-          <span className="text-xs text-muted-foreground group-hover:text-muted-foreground/80">
+          <span className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors">
             {item.description}
           </span>
         )}
@@ -312,30 +308,30 @@ function MobileNavItem({ item }: NavItemProps) {
     <Link
       href={item.href}
       className={cn(
-        "group flex items-center justify-between rounded-md px-4 py-2 text-sm font-medium transition-colors",
+        "group flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200 ease-in-out",
         isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? "bg-indigo-100 text-indigo-700"
+          : "text-gray-600 hover:bg-gray-100 hover:text-indigo-700"
       )}
     >
       <div className="flex items-center gap-x-3 flex-1">
         <item.icon className={cn(
-          "h-5 w-5 transition-colors",
-          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          "h-5 w-5 transition-colors duration-200",
+          isActive ? "text-indigo-700" : "text-gray-500 group-hover:text-indigo-700"
         )} />
         <div className="flex flex-col flex-1">
           <div className="flex items-center gap-2">
-            <span>{item.label}</span>
+            <span className="font-semibold">{item.label}</span>
             {item.badge}
           </div>
           {item.description && (
-            <span className="text-xs text-muted-foreground group-hover:text-muted-foreground/80">
+            <span className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors">
               {item.description}
             </span>
           )}
         </div>
       </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground/80" />
+      <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-indigo-700 transition-colors" />
     </Link>
   )
 }

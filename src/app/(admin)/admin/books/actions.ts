@@ -317,24 +317,47 @@ interface PopularBook {
   stock: number;
 }
 
-// Função para obter livros populares
 export async function getPopularBooks(): Promise<PopularBook[]> {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
+  console.log("Library ID usado em getPopularBooks:", libraryId); // Log para depuração
 
   try {
-    const { data, error } = await supabase.rpc("get_popular_books", { library_id: libraryId }).limit(5);
+    const { data, error } = await supabase
+      .from("books")
+      .select(
+        `
+          id,
+          title,
+          author,
+          available,
+          stock,
+          loans:loans(count)
+        `
+      )
+      .eq("library_id", libraryId);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erro na consulta de livros populares:", error);
+      throw error;
+    }
 
-    return data.map((book: PopularBook) => ({
-      id: book.id,
-      title: book.title,
-      author: book.author,
-      loans: book.loans || 0,
-      available: book.available,
-      stock: book.stock,
+    console.log("Dados brutos de getPopularBooks:", data); // Log para depuração
+
+    const books = (data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      author: row.author,
+      available: row.available,
+      stock: row.stock,
+      loans: row.loans?.[0]?.count || 0,
     }));
+
+    console.log("Livros mapeados em getPopularBooks:", books); // Log para depuração
+
+    return books
+      .sort((a, b) => b.loans - a.loans)
+      .slice(0, 5);
   } catch (error) {
     console.error("Erro ao buscar livros populares:", error);
     throw new Error("Falha ao carregar livros populares");
@@ -418,7 +441,7 @@ export const getAllDashboardData = cache(async () => {
         supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
         supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
         supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
-        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId), // Removido filtro status
+        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
         supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
         supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
         supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
@@ -446,7 +469,19 @@ export const getAllDashboardData = cache(async () => {
         return months;
       })(),
       supabase.from("loans").select("status").eq("library_id", libraryId),
-      supabase.rpc("get_popular_books", { library_id: libraryId }).limit(5),
+      supabase
+        .from("books")
+        .select(
+          `
+            id,
+            title,
+            author,
+            available,
+            stock,
+            loans:loans(count)
+          `
+        )
+        .eq("library_id", libraryId),
       supabase
         .from("loans")
         .select("id, created_at, due_date, status, books:book_id(title), users:user_id(full_name)")
@@ -459,7 +494,7 @@ export const getAllDashboardData = cache(async () => {
       totalBooks,
       newBooks,
       lastMonthBooks,
-      totalUsers, // Alterado de activeUsers
+      totalUsers,
       newUsers,
       lastMonthUsers,
       activeLoans,
@@ -476,7 +511,7 @@ export const getAllDashboardData = cache(async () => {
     const stats = {
       totalBooks,
       booksTrend,
-      totalUsers, // Alterado de activeUsers
+      totalUsers,
       usersTrend,
       activeLoans,
       loansTrend,
@@ -499,14 +534,14 @@ export const getAllDashboardData = cache(async () => {
       { name: "Rejeitados", value: statusCounts["rejected"] || 0, color: "hsl(var(--chart-5))" },
     ];
 
-    const popularBooks = (popularBooksResponse.data ?? []).map((book: PopularBook) => ({
+    const popularBooks = (popularBooksResponse.data ?? []).map((book) => ({
       id: book.id,
       title: book.title,
       author: book.author,
-      loans: book.loans || 0,
+      loans: book.loans?.[0]?.count || 0,
       available: book.available,
       stock: book.stock,
-    }));
+    })).sort((a, b) => b.loans - a.loans).slice(0, 5);
 
     const recentLoans = (recentLoansResponse.data as unknown as RawLoan[] ?? []).map((loan) => ({
       id: loan.id,

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export async function middleware(request: NextRequest) {
+
+
   console.log('Middleware executado para:', request.nextUrl.pathname);
   const supabase = await createClient();
 
@@ -13,9 +15,16 @@ export async function middleware(request: NextRequest) {
   
   console.log('Status autenticação:', user ? 'Autenticado' : 'Não autenticado');
   
+  //criar funcao para redirecionar para deixar uma pagina padrao para o usuario
+  
+
   const pathname = request.nextUrl.pathname;
   const isAdminRoute = pathname.startsWith('/admin');
   const isPublicRoute = ['/login', '/register'].includes(pathname);
+
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
   // Se for uma rota admin e o usuário não estiver autenticado, redireciona para login
   if (isAdminRoute && !user) {
@@ -81,6 +90,8 @@ export const config = {
   matcher: [
     '/login',
     '/register',
-    '/admin/:path*',  // Captura qualquer coisa em /admin, incluindo subpastas
+    '/admin/:path*',
+    '/'
+    // Captura qualquer coisa em /admin, incluindo subpastas
   ],
 };

@@ -6,5 +6,12 @@ export const metadata = {
 }
 
 export default function AdminChatPage() {
-return <AdminChatInterface />
+  return (
+    <div className="container overflow-hidden">
+     
+     <div className=" h-screen w-full overflow-hidden">
+     <AdminChatInterface />
+     </div>
+    </div>
+  )
 }

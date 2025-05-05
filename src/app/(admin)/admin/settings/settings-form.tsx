@@ -2,10 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Save, Book, User, Mail, MapPin, Link } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  Save,
+  Book,
+  User,
+  Mail,
+  MapPin,
+  Link,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,31 +33,41 @@ interface LibrarySettings {
   userName: string;
   contactEmail: string;
   location: string;
-  librarySlug: string; // Novo campo para o slug
+  librarySlug: string;
 }
 
 interface ApiError {
   message: string;
 }
 
-export default function SettingsForm({ initialData }: { initialData: LibrarySettings }) {
+export default function SettingsForm({
+  initialData,
+}: {
+  initialData: LibrarySettings;
+}) {
   const router = useRouter();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const [libraryName, setLibraryName] = useState(initialData?.libraryName || "");
+  const [libraryName, setLibraryName] = useState(
+    initialData?.libraryName || ""
+  );
   const [userName, setUserName] = useState(initialData?.userName || "");
-  const [contactEmail, setContactEmail] = useState(initialData?.contactEmail || "");
+  const [contactEmail, setContactEmail] = useState(
+    initialData?.contactEmail || ""
+  );
   const [location, setLocation] = useState(initialData?.location || "");
-  const [librarySlug, setLibrarySlug] = useState(initialData?.librarySlug || ""); // Novo estado para o slug
+  const [librarySlug, setLibrarySlug] = useState(
+    initialData?.librarySlug || ""
+  );
 
   const [errors, setErrors] = useState({
     libraryName: "",
     userName: "",
     contactEmail: "",
     location: "",
-    librarySlug: "" // Novo campo para erros do slug
+    librarySlug: "",
   });
 
   const validateForm = () => {
@@ -49,7 +75,8 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
     const newErrors: Partial<Record<keyof LibrarySettings, string>> = {};
 
     if (libraryName.length < 2) {
-      newErrors.libraryName = "O nome da biblioteca deve ter pelo menos 2 caracteres.";
+      newErrors.libraryName =
+        "O nome da biblioteca deve ter pelo menos 2 caracteres.";
       isValid = false;
     }
 
@@ -63,23 +90,23 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
       newErrors.contactEmail = "Por favor, insira um endereço de email válido.";
       isValid = false;
     }
-    
+
     if (location.length < 5) {
       newErrors.location = "A localização deve ter pelo menos 5 caracteres.";
       isValid = false;
     }
 
-    // Validação para o slug
     const slugPattern = /^[a-z0-9-]+$/;
     if (!slugPattern.test(librarySlug)) {
-      newErrors.librarySlug = "O slug deve conter apenas letras minúsculas, números e hífens.";
+      newErrors.librarySlug =
+        "O slug deve conter apenas letras minúsculas, números e hífens.";
       isValid = false;
     } else if (librarySlug.length < 3) {
       newErrors.librarySlug = "O slug deve ter pelo menos 3 caracteres.";
       isValid = false;
     }
 
-    setErrors(prev => ({ ...prev, ...newErrors }));
+    setErrors((prev) => ({ ...prev, ...newErrors }));
     return isValid;
   };
 
@@ -97,26 +124,33 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
         userName,
         contactEmail,
         location,
-        librarySlug // Incluindo o slug na atualização
+        librarySlug,
       });
 
       setIsSuccess(true);
       router.refresh();
 
       if (contactEmail !== initialData.contactEmail) {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          contactEmail: "Email atualizado. Verifique sua caixa de entrada para confirmar o novo endereço."
+          contactEmail:
+            "Email atualizado. Verifique sua caixa de entrada para confirmar o novo endereço.",
         }));
       }
     } catch (error: unknown) {
       console.error("Erro ao atualizar configurações:", error);
       const apiError = error as ApiError;
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        userName: apiError.message?.includes("autenticador") ? "Falha ao atualizar o nome ou email no autenticador." : prev.userName,
-        contactEmail: apiError.message?.includes("autenticador") ? "Falha ao atualizar o email no autenticador." : prev.contactEmail,
-        librarySlug: apiError.message?.includes("slug") ? "Este slug já está em uso. Escolha outro." : prev.librarySlug
+        userName: apiError.message?.includes("autenticador")
+          ? "Falha ao atualizar o nome ou email no autenticador."
+          : prev.userName,
+        contactEmail: apiError.message?.includes("autenticador")
+          ? "Falha ao atualizar o email no autenticador."
+          : prev.contactEmail,
+        librarySlug: apiError.message?.includes("slug")
+          ? "Este slug já está em uso. Escolha outro."
+          : prev.librarySlug,
       }));
     } finally {
       setIsSaving(false);
@@ -127,22 +161,30 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8 max-w-7xl mx-auto">
-      <Card className="shadow-xl border-t-4  rounded-xl overflow-hidden transition-all hover:shadow-2xl">
-        <CardHeader className="space-y-2 bg-gradient-to-r from-purple-100 to-blue-100 pb-6">
-          <CardTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Book className="h-6 w-6 text-purple-600" />
+    <form
+      onSubmit={onSubmit}
+      className="space-y-6 max-w-7xl mx-auto px-4 lg:px-0"
+    >
+      <Card className="rounded-md border">
+        <CardHeader className="p-6 border-b">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Book className="h-5 w-5" />
             Informações da Biblioteca
           </CardTitle>
-          <CardDescription className="text-gray-600 text-base">
-            Atualize os detalhes, localização e informações de contato da sua biblioteca.
+          <CardDescription>
+            Atualize os detalhes, localização e informações de contato da sua
+            biblioteca.
           </CardDescription>
         </CardHeader>
-        
-        <CardContent className="space-y-6 pt-6 bg-white">
-          <div className="space-y-3">
-            <Label htmlFor="libraryName" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Book className="h-4 w-4 text-purple-600" />
+
+        <CardContent className="space-y-6 p-6">
+          {/* Nome da biblioteca */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="libraryName"
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              <Book className="h-4 w-4" />
               Nome da Biblioteca
             </Label>
             <Input
@@ -151,44 +193,58 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
               value={libraryName}
               onChange={(e) => setLibraryName(e.target.value)}
               placeholder="Digite o nome da biblioteca"
-              className="transition-all border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
             />
-            {errors.libraryName && <p className="text-red-500 text-xs mt-1">{errors.libraryName}</p>}
+            {errors.libraryName && (
+              <p className="text-red-500 text-xs">{errors.libraryName}</p>
+            )}
           </div>
-          
-          <Separator className="my-6" />
 
-          <div className="space-y-3">
-            <Label htmlFor="librarySlug" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Link className="h-4 w-4 text-purple-600" />
+          <Separator />
+
+          {/* Slug */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="librarySlug"
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              <Link className="h-4 w-4" />
               Slug da Biblioteca
             </Label>
             <div className="flex items-center">
-              <span className="bg-gray-100 px-3 py-2 text-gray-500 border border-r-0 border-gray-300 rounded-l-md">
+              <span className="rounded-l-md border border-r-0 px-3 py-2 text-sm text-muted-foreground">
                 biblioteca.com/
               </span>
               <Input
                 type="text"
                 id="librarySlug"
                 value={librarySlug}
-                onChange={(e) => setLibrarySlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                onChange={(e) =>
+                  setLibrarySlug(
+                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                  )
+                }
                 placeholder="seu-slug-aqui"
-                className="transition-all border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-l-none"
+                className="rounded-l-none"
               />
             </div>
-            {errors.librarySlug && <p className="text-red-500 text-xs mt-1">{errors.librarySlug}</p>}
-            {!errors.librarySlug && (
-              <p className="text-xs text-gray-500 mt-1">
-                O slug será usado na URL da sua biblioteca. Use apenas letras minúsculas, números e hífens.
+            {errors.librarySlug ? (
+              <p className="text-red-500 text-xs">{errors.librarySlug}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Slug é uma parte da URL que identifica exclusivamente a biblioteca. É através dele que os usuários acessarão sua biblioteca online. Use letras minúsculas, números e hífens.
               </p>
             )}
           </div>
 
-          <Separator className="my-6" />
+          <Separator />
 
-          <div className="space-y-3">
-            <Label htmlFor="userName" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <User className="h-4 w-4 text-purple-600" />
+          {/* Nome do administrador */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="userName"
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              <User className="h-4 w-4" />
               Nome do Administrador
             </Label>
             <Input
@@ -197,17 +253,22 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               placeholder="Digite seu nome"
-              className="transition-all border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
             />
-            {errors.userName && <p className="text-red-500 text-xs mt-1">{errors.userName}</p>}
+            {errors.userName && (
+              <p className="text-red-500 text-xs">{errors.userName}</p>
+            )}
           </div>
 
-          <Separator className="my-6" />
+          <Separator />
 
+          {/* Grid de email + localização */}
           <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-3">
-              <Label htmlFor="contactEmail" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Mail className="h-4 w-4 text-purple-600" />
+            <div className="space-y-2">
+              <Label
+                htmlFor="contactEmail"
+                className="flex items-center gap-2 text-sm font-medium"
+              >
+                <Mail className="h-4 w-4" />
                 Email de Contato
               </Label>
               <Input
@@ -216,18 +277,26 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
                 placeholder="contato@exemplo.com"
-                className="transition-all border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
               />
               {errors.contactEmail && (
-                <p className={errors.contactEmail.includes("confirmar") ? "text-amber-600 text-xs mt-1" : "text-red-500 text-xs mt-1"}>
+                <p
+                  className={
+                    errors.contactEmail.includes("confirmar")
+                      ? "text-amber-600 text-xs"
+                      : "text-red-500 text-xs"
+                  }
+                >
                   {errors.contactEmail}
                 </p>
               )}
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="location" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <MapPin className="h-4 w-4 text-purple-600" />
+            <div className="space-y-2">
+              <Label
+                htmlFor="location"
+                className="flex items-center gap-2 text-sm font-medium"
+              >
+                <MapPin className="h-4 w-4" />
                 Localização da Biblioteca
               </Label>
               <Input
@@ -236,34 +305,28 @@ export default function SettingsForm({ initialData }: { initialData: LibrarySett
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Digite a localização da biblioteca"
-                className="transition-all border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
               />
-              {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
+              {errors.location && (
+                <p className="text-red-500 text-xs">{errors.location}</p>
+              )}
             </div>
           </div>
         </CardContent>
-        
-        <CardFooter className="flex justify-end bg-gray-50 px-6 py-4 border-t border-gray-100">
-          <Button
-            type="submit"
-            disabled={isSaving}
-            className="w-36 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all duration-200"
-          >
+
+        <CardFooter className="flex justify-end gap-2 border-t p-6">
+          <Button type="submit" disabled={isSaving} className="w-36">
             {isSaving ? (
-              <div className="flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Salvando...
-              </div>
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+              </>
             ) : isSuccess ? (
-              <div className="flex items-center justify-center">
-                <Check className="h-4 w-4 mr-2" />
-                Salvo
-              </div>
+              <>
+                <Check className="mr-2 h-4 w-4" /> Salvo
+              </>
             ) : (
-              <div className="flex items-center justify-center">
-                <Save className="h-4 w-4 mr-2" />
-                Salvar
-              </div>
+              <>
+                <Save className="mr-2 h-4 w-4" /> Salvar
+              </>
             )}
           </Button>
         </CardFooter>

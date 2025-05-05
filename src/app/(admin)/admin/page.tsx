@@ -141,7 +141,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen ">
       <motion.div
-        className="mx-auto space-y-6 p-4 md:p-8 max-w-7xl"
+        className="mx-auto space-y-6 p-4 md:p-0 max-w-7xl"
         initial="hidden"
         animate="show"
         variants={container}

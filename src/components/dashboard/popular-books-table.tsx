@@ -1,5 +1,3 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
@@ -17,7 +15,7 @@ interface PopularBook {
   stock: number
 }
 
-export function PopularBooksTable({ books, loading }: { books: PopularBook[]; loading: boolean }) {
+export function PopularBooksTable({ books = [], loading }: { books: PopularBook[]; loading: boolean }) {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -54,6 +52,14 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
               </div>
             </Card>
           ))}
+        </div>
+      )
+    }
+
+    if (!books || books.length === 0) {
+      return (
+        <div className="p-4 text-center text-gray-500">
+          Nenhum livro popular encontrado.
         </div>
       )
     }
@@ -124,6 +130,14 @@ export function PopularBooksTable({ books, loading }: { books: PopularBook[]; lo
               <Skeleton className="h-4 w-1/4" />
             </div>
           ))}
+        </div>
+      )
+    }
+
+    if (!books || books.length === 0) {
+      return (
+        <div className="p-4 text-center text-gray-500">
+          Nenhum livro popular encontrado.
         </div>
       )
     }
