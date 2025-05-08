@@ -51,9 +51,71 @@
 
   No caso, se o usuário não fornecer assunto do email, crie um baseado no conteúdo do email, mas sempre valide com o usuário se o assunto está correto. (Não pergunte, faça direto)
 
+  ### **Responsabilidades Principais**
+  1. **Adicionar Livros**
+   - **Individual**: Use a ferramenta addBook para adicionar um único livro. Valide que 'available <= stock' e que o ISBN, se fornecido, tenha até 13 caracteres.
+   - **Em Massa (Excel)**:
+     - Solicite o upload do arquivo Excel via botão de upload (ícone de clipe/nuvem).
+     - Após processamento, informe o número de livros válidos e erros, listando até 5 erros específicos (ex.: "Linha 2: ISBN inválido").
+     - **Peça confirmação explícita** (ex.: "sim", "confirmar") antes de usar addMultipleBooks. Não execute a ferramenta sem confirmação.
+     - Se houver erros, oriente o usuário a corrigir o arquivo e reenviar.
+
+     2. **Excluir Livros**
+   - Use deleteBook com o ID do livro. Se o usuário fornecer apenas o título, use findBookByTitle para localizar o ID e confirme com o usuário.
+
+   3. **Gerenciar Empréstimos**
+   - Para criar, renovar ou devolver empréstimos (\`createLoan\`, \`renewLoan\`, \`returnLoan\`), valide IDs de usuário e livro. Se fornecidos nomes, use \`searchUsers\` ou \`findBookByTitle\` para obter IDs.
+   - Para datas (ex.: \`dueDate\`), exija o formato AAAA-MM-DD. Se o usuário usar outro formato (ex.: "20 de junho de 2025"), peça para corrigir.
+
+4. **Listar Informações**
+   - Para listar livros ou empréstimos (\`listBooks\`, \`listRecentLoans\`), retorne tabelas HTML com classes CSS consistentes (ex.: \`table\`, \`border\`, \`px-4\`, \`py-2\`).
+   - Se não houver dados, retorne uma mensagem clara: \`<p class="text-gray-600">Nenhum resultado encontrado.</p>\`.
+
+5. **Relatórios e Emails**
+   - Para relatórios (\`generateLoanReport\`), forneça o link do PDF diretamente no formato: \`<a href="[URL]" target="_blank" class="text-blue-500 hover:text-blue-600 underline">Baixar Relatório</a>\`.
+   - Para emails (\`sendCustomEmail\`), gere um assunto baseado no conteúdo se não fornecido, mas valide com o usuário (ex.: "Confirme o assunto: [sugestão]"). Use HTML simples para o corpo do email.
+
+---
+
+### **Instruções Gerais**
+- **Validação de Entrada**:
+  - Sempre valide IDs, nomes e datas antes de executar ferramentas. Exemplo: se o usuário fornecer "Dom Quixote" ao invés de um ID, use \`findBookByTitle\` e pergunte: "Você quis dizer o livro com ID [ID]? Confirme."
+  - Para datas inválidas, responda: "Por favor, use o formato AAAA-MM-DD (ex.: 2025-06-20)."
+
+- **Formatação de Respostas**:
+  - **Tabelas HTML**: Use \`<table class="w-full text-sm border-collapse bg-white shadow-sm rounded-lg" aria-label="[descrição]">\` com \`<th>\` e \`<td>\` estilizados com \`border\`, \`px-4\`, \`py-2\`. Não adicione texto introdutório como "Aqui está a tabela".
+  - **Mensagens de Erro**: Use o formato: \`<div class="p-4 rounded-lg bg-red-50 border border-red-200 shadow-sm">...\</div>\`. Exemplo: "❌ Livro não encontrado. Use 'listar livros' para ver os IDs disponíveis."
+  - **Confirmações**: Para ações críticas (ex.: adicionar múltiplos livros), peça confirmação clara: "Confirme com 'sim' ou 'confirmar' para prosseguir."
+
+- **Tom e Clareza**:
+  - Seja amigável, mas direto. Exemplo: "📚 Encontrei 3 livros. Qual ID você quer usar?" ao invés de respostas genéricas.
+  - Evite respostas vagas. Se a solicitação for ambígua, pergunte: "Pode esclarecer? Exemplo: 'adicionar livro' ou 'listar empréstimos'."
+
+- **Limitações**:
+  - Não execute ações sem confirmação explícita do usuário em casos críticos (ex.: \`addMultipleBooks\`, \`deleteBook\`.
+  - Não retorne cercas de código (\`\`\`) ou introduções desnecessárias em respostas HTML.
+
+---
+
+### **Exemplos de Respostas**
+1. **Adição em Massa**:
+   - Após upload: \`<p>Arquivo processado: 10 livros válidos, 2 erros (Linha 3: ISBN duplicado, Linha 5: Estoque inválido). Deseja adicionar os 10 livros válidos? Responda "sim" ou "confirmar".</p>\`
+   - Após confirmação: \`✅ 10 livros adicionados com sucesso. 📚\`
+
+2. **Erro de ID**:
+   - \`❌ ID de livro inválido. Use "listar livros" para encontrar o ID correto.\`
+
+3. **Tabela de Empréstimos**:
+   - \`<table class="w-full text-sm border-collapse bg-white shadow-sm rounded-lg" aria-label="Lista de empréstimos recentes">...\</table>\`
+
+4. **Data Inválida**:
+   - \`❌ Data inválida. Use o formato AAAA-MM-DD (ex.: 2025-06-20).\`
+
   Quando retornar conteúdo HTML, envie **somente** o HTML cru, sem cercas de código e sem a palavra “html”.
 
   Caso o usuário informe uma data em formato incorreto (ex: "20 de junho de 2025"), oriente para usar o formato AAAA-MM-DD (ex: 2025-06-20).
+
+  
   `;
 
   export async function POST(req: Request) {
@@ -122,6 +184,60 @@
             },
           }),
 
+
+         listRecentBooks: tool({
+          description: 'LIstar os 5 livros mais recentes em forma de tabela HTML',
+          parameters: z.object({}),
+          execute: async () => {
+            try {
+              const supabase = await createClient();
+              const { data, error } = await supabase
+                .from("books")
+                .select("id, title, author, created_at")
+                .order("created_at", { ascending: false })
+                .limit(5);
+        
+              if (error) throw error;
+              if (!data || data.length === 0) {
+                return `<p class=\"text-gray-600\">Nenhum livro encontrado.</p>`;
+              }
+        
+              let html = `
+        <table class=\"w-full text-sm border-collapse bg-white shadow-sm rounded-lg\">
+          <thead class=\"bg-gray-50\">
+            <tr>
+              <th class=\"border px-4 py-2 text-left font-medium\">ID</th>
+              <th class=\"border px-4 py-2 text-left font-medium\">Título</th>
+              <th class=\"border px-4 py-2 text-left font-medium\">Autor</th>
+              <th class=\"border px-4 py-2 text-left font-medium\">Data Cadastro</th>
+            </tr>
+          </thead>
+          <tbody>
+        `;
+        
+              for (const book of data) {
+                html += `
+            <tr class=\"hover:bg-gray-50\">
+              <td class=\"border px-4 py-2\">${book.id}</td>
+              <td class=\"border px-4 py-2\">${book.title.replace(/</g, "&lt;")}</td>
+              <td class=\"border px-4 py-2\">${book.author.replace(/</g, "&lt;")}</td>
+              <td class=\"border px-4 py-2\">${new Date(book.created_at).toLocaleDateString("pt-BR")}</td>
+            </tr>
+        `;
+              }
+        
+              html += `
+          </tbody>
+        </table>
+        `;
+              return html.trim();
+            } catch (err) {
+              console.error("Erro ao listar livros:", err);
+              return `<div class=\"p-4 rounded-lg bg-red-50 border border-red-200 shadow-sm\">❌ Erro ao listar livros.</div>`;
+            }
+          },
+        }),
+
           listRecentLoans: tool({
             description: "Listar os 5 empréstimos mais recentes em forma de tabela HTML",
             parameters: z.object({}),
@@ -188,6 +304,8 @@
               }
             },
           }),
+
+       
 
           addMultipleBooks: tool({
             description: "Adicionar MÚLTIPLOS livros à biblioteca APÓS o usuário confirmar explicitamente a partir de um arquivo Excel processado. Requer a lista de livros válidos.",
@@ -339,7 +457,7 @@
           }),
 
           listBooks: tool({
-            description: "Listar todos os livros cadastrados em forma de tabela HTML",
+            description: "Listar todos os livros cadastrados em forma de tabela",
             parameters: z.object({}),
             execute: async () => {
               const supabase = await createClient();
@@ -347,33 +465,34 @@
                 .from("books")
                 .select("id, title, author")
                 .order("created_at", { ascending: false });
-
+          
               if (error) throw error;
               if (!data || data.length === 0) {
-                return `<p>📚 Nenhum livro encontrado.</p>`;
+                return `<p class="text-gray-600">📚 Nenhum livro encontrado.</p>`;
               }
-
-              let html = `<table class="w-full text-sm border-collapse">
-                <thead>
-                  <tr>
-                    <th class="border px-2 py-1">ID</th>
-                    <th class="border px-2 py-1">Título</th>
-                    <th class="border px-2 py-1">Autor</th>
-                  </tr>
-                </thead>
-                <tbody>
+          
+              let html = `
+                <table class="w-full text-sm border-collapse bg-white shadow-sm rounded-lg">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">ID</th>
+                      <th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Título</th>
+                      <th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Autor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
               `;
-
-              for (const b of data) {
+          
+              for (const book of data) {
                 html += `
-                  <tr>
-                    <td class="border px-2 py-1">${b.id}</td>
-                    <td class="border px-2 py-1">${b.title.replace(/</g, "&lt;")}</td>
-                    <td class="border px-2 py-1">${b.author.replace(/</g, "&lt;")}</td>
+                  <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-200 px-4 py-2 text-gray-800">${book.id}</td>
+                    <td class="border border-gray-200 px-4 py-2 text-gray-800">${book.title.replace(/</g, "&lt;")}</td>
+                    <td class="border border-gray-200 px-4 py-2 text-gray-800">${book.author.replace(/</g, "&lt;")}</td>
                   </tr>
                 `;
               }
-
+          
               html += `</tbody></table>`;
               return html;
             },

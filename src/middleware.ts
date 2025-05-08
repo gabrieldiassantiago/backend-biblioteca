@@ -8,10 +8,10 @@ export async function middleware(request: NextRequest) {
   const supabase = await createClient();
 
   // Verificar autenticação do usuário
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user: supabaseUser } } = await supabase.auth.getUser();
   
   // Verificar se o usuário está autenticado
-  const user = session?.user || null;
+  const user = supabaseUser || null;
   
   console.log('Status autenticação:', user ? 'Autenticado' : 'Não autenticado');
   

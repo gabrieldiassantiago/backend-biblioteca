@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, Home, Book, BookOpen, LogOut, User, Library, ChevronRight, BookMarked, MessageCircle, Settings } from 'lucide-react'
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@radix-ui/react-dropdown-menu"
 import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -43,7 +43,6 @@ export default async function AdminLayout({
     .single()
 
   const libraryName = libraryData?.name || ''
-  const userName = userData?.name || user?.email?.split('@')[0] || 'Administrador'
   const userRole = userData?.role || 'Administrador'
 
   let recentLoansCount = 0
@@ -111,10 +110,9 @@ export default async function AdminLayout({
             
             <div className="p-4 border-b bg-gray-50">
               <div className="flex items-center space-x-3">
-                <Avatar className="h-12 w-12 border-2 border-indigo-200 transition-transform hover:scale-105">
-                  <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
+                <Avatar>
                   <AvatarFallback className="bg-indigo-100 text-indigo-600 text-sm font-medium">
-                    {getInitials(userName)}
+                    {getInitials(libraryName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
@@ -161,10 +159,9 @@ export default async function AdminLayout({
           </span>
         </Link>
         
-        <Avatar className="h-9 w-9 border-2 border-indigo-200 transition-transform hover:scale-105">
-          <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
-          <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xs font-medium">
-            {getInitials(userName)}
+        <Avatar>
+          <AvatarFallback className="bg-indigo-100 text-indigo-600 text-sm font-medium">
+            {getInitials(libraryName)}
           </AvatarFallback>
         </Avatar>
       </header>
@@ -185,10 +182,9 @@ export default async function AdminLayout({
           
           <div className="p-4 border-b bg-gray-50">
             <div className="flex items-center space-x-3">
-              <Avatar className="h-12 w-12 border-2 border-indigo-200 transition-transform hover:scale-105">
-                <AvatarImage src={`https://avatar.vercel.sh/${user?.id}.png`} alt={userName} />
+              <Avatar>
                 <AvatarFallback className="bg-indigo-100 text-indigo-600 text-sm font-medium">
-                  {getInitials(userName)}
+                  {getInitials(libraryName)}
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-1">

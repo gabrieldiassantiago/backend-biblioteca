@@ -6,9 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Book, Calendar, Clock, FileText, User, BookOpen, Mail, GraduationCap, School } from "lucide-react"
+import { ArrowLeft, Book, Calendar, Clock, FileText, User, BookOpen, Mail, GraduationCap, School, Phone } from "lucide-react"
 import Link from "next/link"
 import { getUserLibraryId } from "../actions"
+import { Suspense } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Definir tipos para os dados retornados pelo Supabase
 interface BookDetails {
@@ -22,6 +24,7 @@ interface UserDetails {
   id: string
   full_name: string
   email?: string
+  phone?: string
   role: string
   class?: string
   grade?: string
@@ -65,6 +68,7 @@ async function getLoanDetails(id: string) {
         id,
         full_name,
         email,
+        phone,
         role,
         class,
         grade
@@ -112,10 +116,37 @@ interface LoanDetailsPageProps {
   params: Promise<Params>;
 }
 
+// Skeleton para detalhes do empréstimo
+function LoanDetailsSkeleton() {
+  return (
+    <div className="container mx-auto py-8">
+      <div className="mb-6">
+        <Skeleton className="h-6 w-64 mb-2" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-2 space-y-6">
+          <Skeleton className="h-64 w-full mb-4" />
+        </div>
+        <div className="space-y-6">
+          <Skeleton className="h-64 w-full mb-4" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
+// Wrapper para Suspense
+export default function LoanDetailsPageWrapper(props: LoanDetailsPageProps) {
+  return (
+    <Suspense fallback={<LoanDetailsSkeleton />}>
+      <LoanDetailsPageAsync {...props} />
+    </Suspense>
+  )
+}
 
-export default async function LoanDetailsPage({ params }: LoanDetailsPageProps ) {
-
+// Componente assíncrono real
+async function LoanDetailsPageAsync({ params }: LoanDetailsPageProps) {
   const resolvedParams = await params; // Resolve the promise to get the actual params
   const loan = await getLoanDetails(resolvedParams.id)
 
@@ -252,6 +283,15 @@ export default async function LoanDetailsPage({ params }: LoanDetailsPageProps )
                     Email
                   </h4>
                   <p className="text-gray-700 mt-1">{user.email}</p>
+                </div>
+              )}
+              {user.phone && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 flex items-center">
+                    <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                    Telefone do responsável 
+                  </h4>
+                  <p className="text-gray-700 mt-1">{user.phone}</p>
                 </div>
               )}
               {user.class && (

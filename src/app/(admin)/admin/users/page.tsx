@@ -6,7 +6,6 @@ import { MoreHorizontal, Eye, Search } from "lucide-react";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -92,18 +91,6 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
     redirect(`/admin/users?${newParams.toString()}`);
   }
 
-  async function handleRoleFilter(formData: FormData) {
-    "use server";
-    const role = formData.get("role") as string;
-    const newParams = new URLSearchParams({ page: "1" });
-    if (role && role !== "all") {
-      newParams.set("role", role);
-    }
-    if (searchQuery) {
-      newParams.set("search", searchQuery);
-    }
-    redirect(`/admin/users?${newParams.toString()}`);
-  }
 
   return (
     <div className="container mx-auto py-6">
@@ -123,20 +110,6 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
             </div>
             <Button type="submit" variant="outline">Buscar</Button>
           </form>
-          <form action={handleRoleFilter} className="flex items-center gap-2">
-            <Select name="role" defaultValue={roleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por cargo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="student">Estudante</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit" variant="outline">Filtrar</Button>
-          </form>
-          
         </div>
       </div>
       <Suspense fallback={<UsersListSkeleton />}>
@@ -146,7 +119,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
   );
 }
 
-async function UsersTable({ page, searchQuery, roleFilter }: { page: number; searchQuery: string; roleFilter: string }) {
+async function UsersTable({ page, searchQuery }: { page: number; searchQuery: string; roleFilter: string }) {
   const supabase = await createClient();
   const pageSize = 10;
   const offset = (page - 1) * pageSize;
@@ -189,12 +162,9 @@ async function UsersTable({ page, searchQuery, roleFilter }: { page: number; sea
   const libraryId = userLibrary.library_id;
 
   // Contagem
-  let countQuery = supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId);
+  let countQuery = supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("role", "student");
   if (searchQuery) {
     countQuery = countQuery.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
-  }
-  if (roleFilter !== "all") {
-    countQuery = countQuery.eq("role", roleFilter);
   }
   const { count } = await countQuery;
 
@@ -202,13 +172,11 @@ async function UsersTable({ page, searchQuery, roleFilter }: { page: number; sea
   let usersQuery = supabase
     .from("users")
     .select("id, full_name, email, role, created_at, class, grade, library_id")
-    .eq("library_id", libraryId);
+    .eq("library_id", libraryId)
+    .eq("role", "student");
 
   if (searchQuery) {
     usersQuery = usersQuery.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
-  }
-  if (roleFilter !== "all") {
-    usersQuery = usersQuery.eq("role", roleFilter);
   }
 
   const { data: users, error } = await usersQuery

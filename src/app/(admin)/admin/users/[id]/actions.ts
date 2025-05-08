@@ -9,6 +9,8 @@ interface StudentUpdateData {
   class?: string
   grade?: string
   library_id: string
+  phone?: string
+  observations?: string
 }
 
 export async function updateStudent(studentId: string, data: StudentUpdateData) {
@@ -55,6 +57,8 @@ export async function updateStudent(studentId: string, data: StudentUpdateData) 
         email: data.email,
         class: data.class || null,
         grade: data.grade || null,
+        phone: data.phone || null,
+        observations: data.observations || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", studentId)

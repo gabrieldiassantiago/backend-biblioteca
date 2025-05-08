@@ -166,71 +166,64 @@ export function AdminChatInterface() {
     const urlRegex = /(https?:\/\/[^\s"'<>]+)/g;
     const hasUrl = urlRegex.test(fullContent);
   
-    // Tratamento especial para mensagens de relatório
     if (isReportMessage && hasUrl) {
-      const reportUrl = fullContent.match(urlRegex)?.[0] || '';
-      
-      // Mostrar mensagem de "Gerando relatório..." com tempo reduzido
+      const reportUrl = fullContent.match(urlRegex)?.[0] || "";
       const loadingContent = `
-        <div class="p-4 rounded-lg border bg-blue-50 border-blue-200 shadow-sm w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto">
+        <div class="p-4 rounded-lg border bg-blue-50 border-blue-200 shadow-sm transition-opacity duration-300">
           <div class="flex items-start gap-2 mb-3">
-            <div class="flex-shrink-0 mt-0.5">
-              <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
+            <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
             <div>
               <p class="text-sm text-blue-600 font-medium mb-1">Gerando Relatório...</p>
-              <p class="text-sm text-gray-600">Aguarde enquanto preparamos seu relatório.</p>
+              <p class="text-sm text-gray-600">Aguarde alguns instantes.</p>
             </div>
           </div>
         </div>
       `;
-      
+    
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === messageId ? { ...msg, content: loadingContent, isLoading: true } : msg
         ) as Message[]
       );
-      
-      // Reduzido para 1.5 segundos
+    
       setTimeout(() => {
         const finalContent = `
-          <div class="p-4 rounded-lg border bg-green-50 border-green-200 shadow-sm w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto">
+          <div class="p-4 rounded-lg border bg-green-50 border-green-200 shadow-sm transition-opacity duration-300">
             <div class="flex items-start gap-2 mb-3">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
                 <p class="text-sm text-green-600 font-medium mb-1">Relatório Gerado com Sucesso</p>
-                <p class="text-sm text-gray-600">O relatório foi gerado e está pronto para download.</p>
+                <p class="text-sm text-gray-600">O relatório está pronto para download.</p>
               </div>
             </div>
             <div class="mt-3 flex items-center justify-between bg-white p-3 rounded border border-gray-100">
               <div class="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span class="text-sm text-gray-700 font-medium">Relatório da Biblioteca</span>
               </div>
               <a href="${reportUrl}" target="_blank" class="inline-flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded-md transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 <span>Baixar</span>
               </a>
             </div>
           </div>
-        `.trim();
-        
+        `;
+    
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId ? { ...msg, content: finalContent, isLoading: false } : msg
           ) as Message[]
         );
-      }, 1500);
-      
+      }, 1000); // Reduzido de 1.5s para 1s
       return;
     }
   
