@@ -90,30 +90,7 @@ export async function POST(req: Request) {
   } = await req.json();
 
   try {
-    // Analisar a intenção do usuário para melhorar a precisão da resposta
-    const userMessage = messages.filter(m => m.role === "user").pop()?.content.toLowerCase() || "";
     
-    // Classificação de intenção para melhorar a precisão
-    let toolPriority = null;
-    
-    if (userMessage.includes("listar livro") || userMessage.includes("mostrar livro") || userMessage.includes("ver livro")) {
-      toolPriority = "listBooks";
-    } else if (userMessage.includes("listar empréstimo") || userMessage.includes("mostrar empréstimo") || userMessage.includes("ver empréstimo")) {
-      toolPriority = "listRecentLoans";
-    } else if (userMessage.includes("adicionar livro") || userMessage.includes("cadastrar livro") || userMessage.includes("novo livro")) {
-      toolPriority = "addBook";
-    } else if (userMessage.includes("excluir livro") || userMessage.includes("remover livro") || userMessage.includes("deletar livro")) {
-      toolPriority = "deleteBook";
-    } else if (userMessage.includes("enviar email") || userMessage.includes("notificar")) {
-      toolPriority = "sendCustomEmail";
-    } else if (userMessage.includes("gerar relatório") || userMessage.includes("criar relatório")) {
-      // Prioridade para ferramentas de relatório
-      if (userMessage.includes("empréstimo")) {
-        toolPriority = "generateLoanReport";
-      } else if (userMessage.includes("livro")) {
-        toolPriority = "generateBookReport";
-      }
-    }
 
     const { text, toolResults } = await generateText({
       model: google("gemini-2.0-flash"),
@@ -537,12 +514,3 @@ export async function POST(req: Request) {
   }
 }
 
-// Função auxiliar para formatação de data
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pt-BR', { 
-    day: '2-digit', 
-    month: '2-digit', 
-    year: 'numeric' 
-  });
-}
