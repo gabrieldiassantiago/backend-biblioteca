@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useDebounce } from "@/app/hooks/useDebounce"
+import Image from "next/image"
 
 export default function LibraryClient({
   library,
@@ -243,6 +244,12 @@ export default function LibraryClient({
                         <Card className="h-full overflow-hidden border-0 bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
                           <CardHeader className="p-6 pb-0">
                             <div className="flex justify-between items-start mb-2">
+
+
+                           
+
+
+                           
                               <h2 className="text-xl font-semibold text-gray-800 dark:text-white line-clamp-2">
                                 {book.title}
                               </h2>

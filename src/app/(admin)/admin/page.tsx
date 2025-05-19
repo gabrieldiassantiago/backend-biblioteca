@@ -11,8 +11,12 @@ import { BookLoanChart } from "@/components/dashboard/book-loan-chart"
 import { LoanStatusChart } from "@/components/dashboard/loan-status-chart"
 import { PopularBooksTable } from "@/components/dashboard/popular-books-table"
 import { RecentLoansTable } from "@/components/dashboard/recent-loans-table"
-import { getAllDashboardData } from "./books/actions"
 import { StatCard } from "@/components/dashboard/StatCard"
+<<<<<<< Updated upstream
+=======
+import { Button } from "@/components/ui/button"
+import { getAllDashboardData } from "./dashboardActions"
+>>>>>>> Stashed changes
 
 // Interfaces
 interface DashboardStat {
@@ -31,6 +35,7 @@ interface LoanStatusData {
   name: string
   value: number
   color: string
+
 }
 
 interface PopularBook {
@@ -73,8 +78,12 @@ export default function AdminDashboardPage() {
     try {
       const data = await getAllDashboardData()
 
+<<<<<<< Updated upstream
       // Atualizar com cores mais vibrantes para o gráfico de status
       const updatedLoanStatus = data.loanStatus.map((status, index) => {
+=======
+      const updatedLoanStatus = data.loanStatus.map((status: LoanStatusData, index: number) => {
+>>>>>>> Stashed changes
         const colors = [
           "#4338ca", // indigo-700
           "#059669", // emerald-600

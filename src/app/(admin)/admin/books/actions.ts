@@ -1,17 +1,12 @@
+// actions/bookActions.ts
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { cache } from "react";
 import { revalidatePath } from "next/cache";
 
-// Função auxiliar para obter o library_id do usuário autenticado
 async function getUserLibraryId() {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error("Usuário não autenticado");
 
   const { data: userData, error: userError } = await supabase
@@ -20,6 +15,7 @@ async function getUserLibraryId() {
     .eq("id", user.id)
     .single();
 
+<<<<<<< Updated upstream
   if (userError || !userData?.library_id) {
     throw new Error("Usuário não está vinculado a uma biblioteca");
   }
@@ -45,6 +41,12 @@ async function getLibraryName(libraryId: string) {
 }
 
 // Função para cadastrar ou atualizar um livro
+=======
+  if (!userData?.library_id) redirect("/login");
+  return userData.library_id;
+}
+
+>>>>>>> Stashed changes
 export async function handleSubmitBook(formData: FormData) {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
@@ -53,16 +55,12 @@ export async function handleSubmitBook(formData: FormData) {
   const title = formData.get("title") as string;
   const author = formData.get("author") as string;
   const isbn = formData.get("isbn") as string;
+  const stock = parseInt(formData.get("stock") as string, 10);
+  const available = parseInt(formData.get("available") as string, 10);
 
-  const stockStr = formData.get("stock");
-  if (!stockStr || typeof stockStr !== "string") {
-    throw new Error("O estoque deve ser um número inteiro válido.");
-  }
-  const stock = Number.parseInt(stockStr, 10);
-  if (isNaN(stock) || stock < 0) {
-    throw new Error("O estoque não pode ser negativo.");
-  }
+  if (available > stock) throw new Error("Disponível > estoque");
 
+<<<<<<< Updated upstream
   const availableStr = formData.get("available");
   if (!availableStr || typeof availableStr !== "string") {
     throw new Error("A quantidade disponível deve ser um número inteiro válido.");
@@ -74,40 +72,57 @@ export async function handleSubmitBook(formData: FormData) {
   if (available > stock) {
     throw new Error("A quantidade disponível não pode ser maior que o estoque.");
   }
+=======
+  const imageFile = formData.get("image") as File | null;
+  let imageUrl: string | null = null;
+>>>>>>> Stashed changes
 
-  try {
-    if (bookId) {
-      const { data: existingBook } = await supabase.from("books").select("library_id").eq("id", bookId).single();
-
-      if (existingBook?.library_id !== libraryId) {
-        throw new Error("Você não tem permissão para editar este livro");
-      }
-
-      const { error: updateError } = await supabase
-        .from("books")
-        .update({
-          title,
-          author,
-          isbn,
-          stock,
-          available,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", bookId)
-        .eq("library_id", libraryId);
-
-      if (updateError) throw updateError;
-    } else {
-      const { error: insertError } = await supabase.from("books").insert({
-        title,
-        author,
-        isbn,
-        stock,
-        available,
-        library_id: libraryId,
+  if (imageFile && imageFile.size > 0) {
+    const fileName = `${libraryId}/${Date.now()}_${imageFile.name}`;
+    const {  error: uploadError } = await supabase.storage
+      .from("book-covers")
+      .upload(fileName, imageFile, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: imageFile.type,
       });
+    if (uploadError) throw new Error("Erro ao enviar imagem do livro");
+    imageUrl = supabase.storage.from("book-covers").getPublicUrl(fileName).data.publicUrl;
+  }
 
-      if (insertError) throw insertError;
+ try {
+  const bookData: {
+    title: string;
+    author: string;
+    isbn: string;
+    stock: number;
+    available: number;
+    image_url: string | null;
+    updated_at: string;
+  } = {
+    title,
+    author,
+    isbn,
+    stock,
+    available,
+    image_url: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (imageUrl) {
+    bookData.image_url = imageUrl;
+  }
+
+    if (bookId) {
+      const { data: existingBook } = await supabase
+        .from("books")
+        .select("library_id")
+        .eq("id", bookId)
+        .single();
+      if (existingBook?.library_id !== libraryId) throw new Error("Sem permissão para editar livro");
+      await supabase.from("books").update(bookData).eq("id", bookId).eq("library_id", libraryId);
+    } else {
+      await supabase.from("books").insert({ ...bookData, library_id: libraryId });
     }
 
     revalidatePath("/admin/books");
@@ -117,48 +132,32 @@ export async function handleSubmitBook(formData: FormData) {
     throw new Error("Erro ao salvar livro");
   }
 }
-
-// Função para excluir um livro
 export async function handleDeleteBook(bookId: string) {
   const supabase = await createClient();
   const libraryId = await getUserLibraryId();
 
-  try {
-    // Verifica se o livro pertence à biblioteca do usuário
-    const { data: book } = await supabase.from("books").select("library_id").eq("id", bookId).single();
-    if (book?.library_id !== libraryId) {
-      throw new Error("Você não tem permissão para excluir este livro");
-    }
+  const { data: book } = await supabase.from("books").select("library_id").eq("id", bookId).single();
+  if (book?.library_id !== libraryId) throw new Error("Sem permissão para excluir livro");
 
-    // Verifica empréstimos ativos
-    const { data: activeLoans, error: loansError } = await supabase
-      .from("loans")
-      .select("id")
-      .eq("book_id", bookId)
-      .eq("status", "active")
-      .limit(1);
-  
-    console.log("Resultado da consulta de empréstimos ativos:", { activeLoans, loansError });
-    if (loansError) {
-      console.error("Erro na consulta de empréstimos ativos:", loansError);
-      throw new Error(`Erro ao verificar empréstimos ativos: ${loansError.message}`);
-    }
-    if (activeLoans && activeLoans.length > 0) {
-      throw new Error("Não é possível excluir um livro com empréstimos ativos.");
-    }
-      
-    // Exclui o livro
-    const { error: deleteError } = await supabase.from("books").delete().eq("id", bookId).eq("library_id", libraryId);
-    if (deleteError) throw deleteError;
+  const { data: activeLoans } = await supabase
+    .from("loans")
+    .select("id")
+    .eq("book_id", bookId)
+    .eq("status", "active")
+    .limit(1);
+  if (activeLoans && activeLoans.length > 0) throw new Error("Livro com empréstimos ativos");
 
-    // Revalida os caminhos
-    revalidatePath("/admin/books");
-    revalidatePath("/dashboard");
-  } catch (error) {
-    console.error("Erro ao excluir livro:", error);
-    throw new Error("Erro ao excluir livro");
-  }
+  const { error: deleteError } = await supabase
+    .from("books")
+    .delete()
+    .eq("id", bookId)
+    .eq("library_id", libraryId);
+  if (deleteError) throw deleteError;
+
+  revalidatePath("/admin/books");
+  revalidatePath("/dashboard");
 }
+<<<<<<< Updated upstream
 
 // Interface para estatísticas do dashboard
 interface DashboardStats {
@@ -534,3 +533,5 @@ export const getAllDashboardData = cache(async () => {
     throw error;
   }
 });
+=======
+>>>>>>> Stashed changes

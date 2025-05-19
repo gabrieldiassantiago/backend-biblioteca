@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import type { Book } from "../../app/(admin)/admin/books/types/BookFormData"
 import { AlertCircle, BookOpen, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Image from "next/image"
 
 interface BookFormProps {
   book?: Book
@@ -87,6 +88,12 @@ export function BookForm({ book, open, onOpenChange }: BookFormProps) {
         <form onSubmit={onSubmit} className="space-y-4">
           {book?.id && <input type="hidden" name="id" value={book.id} />}
 
+          <div className="flex flex-col items-center">
+              {book?.image_url && (
+        <Image width={140} height={140} src={book.image_url} alt="Capa do livro" className="mt-2 max-h-72 object-contain" />
+      )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Título</Label>
             <Input
@@ -150,6 +157,18 @@ export function BookForm({ book, open, onOpenChange }: BookFormProps) {
                 required
               />
             </div>
+
+            <div className="space-y-2">
+      <Label htmlFor="image">Capa do Livro (Imagem)</Label>
+      <Input
+        id="image"
+        name="image"
+        type="file"
+        accept="image/*"
+      />
+    
+    </div>
+
           </div>
 
           <DialogFooter className="mt-6">

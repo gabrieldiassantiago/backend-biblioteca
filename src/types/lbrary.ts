@@ -16,6 +16,7 @@ export interface Library {
     stock: number;
     available: number;
     created_at: string;
+    image_url?: string | null;
     updated_at: string;
   }
   
@@ -32,6 +33,7 @@ export interface Library {
     params: { slug: string };
     searchQuery: string;
     page: number;
+    imageUrl?: string;
     limit: number;
     user: User | null;
     isSearched: boolean;
