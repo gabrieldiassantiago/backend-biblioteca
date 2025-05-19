@@ -37,13 +37,59 @@ export default function ReportsPageWrapper() {
 async function ReportsPage() {
   const supabase = await createClient();
 
-  // Buscar totais
-  const { count: totalAlunos } = await supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "student");
-  const { count: totalLivros } = await supabase.from("books").select("*", { count: "exact", head: true });
-  const { count: totalEmprestimos } = await supabase.from("loans").select("*", { count: "exact", head: true });
-  const { count: emprestimosAtivos } = await supabase.from("loans").select("*", { count: "exact", head: true }).eq("status", "active");
-  const { count: emprestimosDevolvidos } = await supabase.from("loans").select("*", { count: "exact", head: true }).eq("status", "returned");
-  const { count: emprestimosAtrasados } = await supabase.from("loans").select("*", { count: "exact", head: true }).eq("status", "overdue");
+  // Pega usuário autenticado
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error("Usuário não autenticado");
+  }
+
+  // Pega o library_id do usuário
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("library_id")
+    .eq("id", user.id)
+    .single();
+
+  if (userError || !userData?.library_id) {
+    throw new Error("Usuário sem biblioteca vinculada");
+  }
+
+  const libraryId = userData.library_id;
+
+  // Buscar totais filtrados pela library_id
+  const { count: totalAlunos } = await supabase
+    .from("users")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "student")
+    .eq("library_id", libraryId);
+
+  const { count: totalLivros } = await supabase
+    .from("books")
+    .select("*", { count: "exact", head: true })
+    .eq("library_id", libraryId);
+
+  const { count: totalEmprestimos } = await supabase
+    .from("loans")
+    .select("*", { count: "exact", head: true })
+    .eq("library_id", libraryId);
+
+  const { count: emprestimosAtivos } = await supabase
+    .from("loans")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "active")
+    .eq("library_id", libraryId);
+
+  const { count: emprestimosDevolvidos } = await supabase
+    .from("loans")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "returned")
+    .eq("library_id", libraryId);
+
+  const { count: emprestimosAtrasados } = await supabase
+    .from("loans")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "overdue")
+    .eq("library_id", libraryId);
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 space-y-8">
@@ -59,6 +105,7 @@ async function ReportsPage() {
             <CardDescription>Total de estudantes cadastrados</CardDescription>
           </CardContent>
         </Card>
+
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <BookOpen className="h-6 w-6 text-primary" />
@@ -69,6 +116,7 @@ async function ReportsPage() {
             <CardDescription>Total de livros cadastrados</CardDescription>
           </CardContent>
         </Card>
+
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <ClipboardList className="h-6 w-6 text-primary" />
@@ -79,6 +127,7 @@ async function ReportsPage() {
             <CardDescription>Total de empréstimos realizados</CardDescription>
           </CardContent>
         </Card>
+
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <Clock className="h-6 w-6 text-primary" />
@@ -89,6 +138,7 @@ async function ReportsPage() {
             <CardDescription>Empréstimos em andamento</CardDescription>
           </CardContent>
         </Card>
+
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <CheckCircle className="h-6 w-6 text-green-600" />
@@ -99,6 +149,7 @@ async function ReportsPage() {
             <CardDescription>Empréstimos devolvidos</CardDescription>
           </CardContent>
         </Card>
+
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center gap-3 pb-2">
             <AlertTriangle className="h-6 w-6 text-red-600" />
@@ -112,4 +163,4 @@ async function ReportsPage() {
       </div>
     </div>
   );
-} 
+}

@@ -105,7 +105,11 @@ export function BookForm({ book, open, onOpenChange }: BookFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="isbn">ISBN</Label>
+            <Label htmlFor="isbn">ISBN (código de identificação)</Label>
+            
+
+
+
             <Input
               id="isbn"
               name="isbn"

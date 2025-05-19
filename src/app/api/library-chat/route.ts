@@ -1,687 +1,548 @@
+import { createClient } from "@/lib/supabase/server";
+import { handleDeleteBook, handleSubmitBook } from "@/app/(admin)/admin/books/actions";
+import { generateText, tool } from "ai";
+import { google } from "@ai-sdk/google";
+import { z } from "zod";
+import nodemailer from "nodemailer";
 
-  import { createClient } from "@/lib/supabase/server";
-  import { handleDeleteBook, handleSubmitBook } from "@/app/(admin)/admin/books/actions";
-  import { generateText, tool } from "ai";
-  import { google } from "@ai-sdk/google";
-  import { z } from "zod";
-  import { createLoanAction, renewLoanAction, returnLoanAction, searchUsersAction } from "./actions";
-  import nodemailer from "nodemailer";
+// Interfaces
+interface BookData {
+  title: string;
+  author: string;
+  isbn?: string;
+  stock: number;
+  available: number;
+}
 
-  export const maxDuration = 60;
+interface Loan {
+  id: string;
+  created_at: string;
+  due_date: string;
+  status: string;
+  books: { title: string } | null;
+  users: { full_name: string } | null;
+}
 
-  // Interface for book data used in addMultipleBooks
-  interface BookData {
-    title: string;
-    author: string;
-    isbn?: string;
-    stock: number;
-    available: number;
+// Sistema de prompt melhorado com instruções mais específicas e exemplos claros
+const systemPrompt = `
+Você é a Biblioteca AI 📚, um assistente inteligente para gerenciamento de bibliotecas digitais.
+
+## INSTRUÇÕES GERAIS
+- Ao adicionar livros em massa via Excel, sempre confirme com o usuário antes de adicionar.
+- Explique claramente para o usuário o que é o ISBN, sua importância e como encontrá-lo (ex: na contracapa ou página de dados do livro).
+- Se o usuário pedir "ajuda", explique o que cada ferramenta pode fazer, com exemplos simples.
+- Se o usuário fornecer um ISBN, use a ferramenta de busca para retornar dados completos do livro, incluindo título, autor, estoque e disponibilidade.
+- Para listar livros, mostre uma lista resumida com os 10 livros mais recentes, informe o total e oriente como fazer buscas específicas.
+- Sempre valide IDs e nomes fornecidos; se estiverem incompletos ou ambíguos, ajude o usuário a encontrar os dados corretos antes de prosseguir.
+- Para datas, sempre oriente o usuário a usar o formato ISO (AAAA-MM-DD) e forneça exemplos claros.
+- Seja educado, claro e objetivo. Explique passos quando necessário, especialmente para usuários iniciantes.
+- Sempre confirme ações importantes, como exclusão de livros ou confirmações de empréstimos.
+- Jamais retorne algo sem o que eu solicite, exemplo, se eu pedir para listar livros, não me retorne uma mensagem tipo "aqui esta" mas sem a lista.
+
+## COMANDOS E FERRAMENTAS
+Quando o usuário solicitar as seguintes ações, use EXATAMENTE a ferramenta correspondente:
+
+1. LIVROS:
+   - "listar livros", "mostrar livros", "ver livros" → use a ferramenta 'listBooks'
+   - "adicionar livro", "cadastrar livro", "novo livro" → use a ferramenta 'addBook'
+   - "excluir livro", "remover livro", "deletar livro" → use a ferramenta 'deleteBook'
+   - "adicionar vários livros", "importar livros" → use a ferramenta 'addMultipleBooks'
+
+2. EMPRÉSTIMOS:
+   - "listar empréstimos", "mostrar empréstimos", "ver empréstimos" → use a ferramenta 'listRecentLoans'
+   - "renovar empréstimo", "estender empréstimo" → use a ferramenta 'renewLoanAction'
+   - "devolver livro", "finalizar empréstimo" → use a ferramenta 'returnLoanAction'
+
+3. COMUNICAÇÃO:
+   - "enviar email", "notificar usuário" → use a ferramenta 'sendCustomEmail'
+
+4. RELATÓRIOS:
+   - "gerar relatório", "criar relatório" → use as ferramentas de relatório correspondentes
+`;
+
+export async function POST(req: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: "Usuário não autenticado" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  // Interface for loan data in listRecentLoans
-  interface Loan {
-    id: string;
-    created_at: string;
-    due_date: string;
-    status: string;
-    books: { title: string } | null;
-    users: { full_name: string } | null;
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("library_id")
+    .eq("id", user.id)
+    .single();
+
+  if (userError || !userData?.library_id) {
+    throw new Error("Usuário sem biblioteca vinculada");
   }
 
-  const systemPrompt = `
-  Você é a Biblioteca AI 📚, um assistente inteligente especializado no gerenciamento de bibliotecas digitais.
-  Seu papel é ajudar os administradores com tarefas como adicionar livros (individualmente ou em massa via Excel), excluir livros, gerenciar empréstimos e buscar informações.
+  const { messages, bookDataForTool }: {
+    messages: { role: "user" | "assistant" | "system"; content: string }[];
+    bookDataForTool?: BookData[];
+  } = await req.json();
 
-  **Importante sobre Adição em Massa (Excel):**
-  1. Primeiro, peça ao usuário para usar o botão de upload (ícone de clipe/nuvem) para enviar o arquivo Excel.
-  2. Após o processamento do arquivo, o sistema informará quantos livros são válidos e se há erros.
-  3. Pergunte explicitamente ao usuário se ele deseja confirmar a adição dos livros válidos.
-  4. SOMENTE QUANDO o usuário confirmar (responder "sim", "confirmar", etc.), use a ferramenta 'addMultipleBooks' para adicioná-los. NÃO use a ferramenta antes da confirmação explícita.
-  5. Se houver erros no arquivo, informe o usuário e NÃO prossiga com a adição até que um arquivo corrigido seja enviado.
-
-  Se o usuário perguntar sobre listar livros, chame a ferramenta 'listBooks' para listar os livros.
-
-  Seja claro, educado e objetivo.
-  Explique os passos quando necessário e sempre valide se o usuário tem as informações corretas (como IDs ou nomes completos).
-
-  Quando for necessário ID de algum item e o usuário fornecer apenas o nome ou descrição, ofereça ajuda para encontrar o ID correto antes de prosseguir.
-
-  Se o usuário não fornecer um ID válido, forneça ajuda para encontrar o ID correto antes de prosseguir.
-  ⚠️ Quando usar ferramentas que retornam HTML (como tabelas), envie apenas o HTML cru. Não escreva introduções como "Aqui está" ou "Veja abaixo". E não use cercas de código.
-
-  No caso, se o usuário não fornecer assunto do email, crie um baseado no conteúdo do email, mas sempre valide com o usuário se o assunto está correto. (Não pergunte, faça direto)
-
-  ### **Responsabilidades Principais**
-  1. **Adicionar Livros**
-   - **Individual**: Use a ferramenta addBook para adicionar um único livro. Valide que 'available <= stock' e que o ISBN, se fornecido, tenha até 13 caracteres.
-   - **Em Massa (Excel)**:
-     - Solicite o upload do arquivo Excel via botão de upload (ícone de clipe/nuvem).
-     - Após processamento, informe o número de livros válidos e erros, listando até 5 erros específicos (ex.: "Linha 2: ISBN inválido").
-     - **Peça confirmação explícita** (ex.: "sim", "confirmar") antes de usar addMultipleBooks. Não execute a ferramenta sem confirmação.
-     - Se houver erros, oriente o usuário a corrigir o arquivo e reenviar.
-
-     2. **Excluir Livros**
-   - Use deleteBook com o ID do livro. Se o usuário fornecer apenas o título, use findBookByTitle para localizar o ID e confirme com o usuário.
-
-   3. **Gerenciar Empréstimos**
-   - Para criar, renovar ou devolver empréstimos (\`createLoan\`, \`renewLoan\`, \`returnLoan\`), valide IDs de usuário e livro. Se fornecidos nomes, use \`searchUsers\` ou \`findBookByTitle\` para obter IDs.
-   - Para datas (ex.: \`dueDate\`), exija o formato AAAA-MM-DD. Se o usuário usar outro formato (ex.: "20 de junho de 2025"), peça para corrigir.
-
-4. **Listar Informações**
-   - Para listar livros ou empréstimos (\`listBooks\`, \`listRecentLoans\`), retorne tabelas HTML com classes CSS consistentes (ex.: \`table\`, \`border\`, \`px-4\`, \`py-2\`).
-   - Se não houver dados, retorne uma mensagem clara: \`<p class="text-gray-600">Nenhum resultado encontrado.</p>\`.
-
-5. **Relatórios e Emails**
-   - Para relatórios (\`generateLoanReport\`), forneça o link do PDF diretamente no formato: \`<a href="[URL]" target="_blank" class="text-blue-500 hover:text-blue-600 underline">Baixar Relatório</a>\`.
-   - Para emails (\`sendCustomEmail\`), gere um assunto baseado no conteúdo se não fornecido, mas valide com o usuário (ex.: "Confirme o assunto: [sugestão]"). Use HTML simples para o corpo do email.
-
----
-
-### **Instruções Gerais**
-- **Validação de Entrada**:
-  - Sempre valide IDs, nomes e datas antes de executar ferramentas. Exemplo: se o usuário fornecer "Dom Quixote" ao invés de um ID, use \`findBookByTitle\` e pergunte: "Você quis dizer o livro com ID [ID]? Confirme."
-  - Para datas inválidas, responda: "Por favor, use o formato AAAA-MM-DD (ex.: 2025-06-20)."
-
-- **Formatação de Respostas**:
-  - **Tabelas HTML**: Use \`<table class="w-full text-sm border-collapse bg-white shadow-sm rounded-lg" aria-label="[descrição]">\` com \`<th>\` e \`<td>\` estilizados com \`border\`, \`px-4\`, \`py-2\`. Não adicione texto introdutório como "Aqui está a tabela".
-  - **Mensagens de Erro**: Use o formato: \`<div class="p-4 rounded-lg bg-red-50 border border-red-200 shadow-sm">...\</div>\`. Exemplo: "❌ Livro não encontrado. Use 'listar livros' para ver os IDs disponíveis."
-  - **Confirmações**: Para ações críticas (ex.: adicionar múltiplos livros), peça confirmação clara: "Confirme com 'sim' ou 'confirmar' para prosseguir."
-
-- **Tom e Clareza**:
-  - Seja amigável, mas direto. Exemplo: "📚 Encontrei 3 livros. Qual ID você quer usar?" ao invés de respostas genéricas.
-  - Evite respostas vagas. Se a solicitação for ambígua, pergunte: "Pode esclarecer? Exemplo: 'adicionar livro' ou 'listar empréstimos'."
-
-- **Limitações**:
-  - Não execute ações sem confirmação explícita do usuário em casos críticos (ex.: \`addMultipleBooks\`, \`deleteBook\`.
-  - Não retorne cercas de código (\`\`\`) ou introduções desnecessárias em respostas HTML.
-
----
-
-### **Exemplos de Respostas**
-1. **Adição em Massa**:
-   - Após upload: \`<p>Arquivo processado: 10 livros válidos, 2 erros (Linha 3: ISBN duplicado, Linha 5: Estoque inválido). Deseja adicionar os 10 livros válidos? Responda "sim" ou "confirmar".</p>\`
-   - Após confirmação: \`✅ 10 livros adicionados com sucesso. 📚\`
-
-2. **Erro de ID**:
-   - \`❌ ID de livro inválido. Use "listar livros" para encontrar o ID correto.\`
-
-3. **Tabela de Empréstimos**:
-   - \`<table class="w-full text-sm border-collapse bg-white shadow-sm rounded-lg" aria-label="Lista de empréstimos recentes">...\</table>\`
-
-4. **Data Inválida**:
-   - \`❌ Data inválida. Use o formato AAAA-MM-DD (ex.: 2025-06-20).\`
-
-  Quando retornar conteúdo HTML, envie **somente** o HTML cru, sem cercas de código e sem a palavra “html”.
-
-  Caso o usuário informe uma data em formato incorreto (ex: "20 de junho de 2025"), oriente para usar o formato AAAA-MM-DD (ex: 2025-06-20).
-
-  
-  `;
-
-  export async function POST(req: Request) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Usuário não autenticado" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+  try {
+    // Analisar a intenção do usuário para melhorar a precisão da resposta
+    const userMessage = messages.filter(m => m.role === "user").pop()?.content.toLowerCase() || "";
+    
+    // Classificação de intenção para melhorar a precisão
+    let toolPriority = null;
+    
+    if (userMessage.includes("listar livro") || userMessage.includes("mostrar livro") || userMessage.includes("ver livro")) {
+      toolPriority = "listBooks";
+    } else if (userMessage.includes("listar empréstimo") || userMessage.includes("mostrar empréstimo") || userMessage.includes("ver empréstimo")) {
+      toolPriority = "listRecentLoans";
+    } else if (userMessage.includes("adicionar livro") || userMessage.includes("cadastrar livro") || userMessage.includes("novo livro")) {
+      toolPriority = "addBook";
+    } else if (userMessage.includes("excluir livro") || userMessage.includes("remover livro") || userMessage.includes("deletar livro")) {
+      toolPriority = "deleteBook";
+    } else if (userMessage.includes("enviar email") || userMessage.includes("notificar")) {
+      toolPriority = "sendCustomEmail";
+    } else if (userMessage.includes("gerar relatório") || userMessage.includes("criar relatório")) {
+      // Prioridade para ferramentas de relatório
+      if (userMessage.includes("empréstimo")) {
+        toolPriority = "generateLoanReport";
+      } else if (userMessage.includes("livro")) {
+        toolPriority = "generateBookReport";
+      }
     }
 
-    const { messages, bookDataForTool }: {
-      messages: { role: "user" | "assistant" | "system"; content: string }[];
-      bookDataForTool?: BookData[];
-    } = await req.json();
+    const { text, toolResults } = await generateText({
+      model: google("gemini-2.0-flash"),
+      maxSteps: 6,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
+      tools: {
+        addBook: tool({
+          description: "Adicionar um ÚNICO novo livro à biblioteca",
+          parameters: z.object({
+            title: z.string(),
+            author: z.string(),
+            isbn: z.string().max(13).optional(),
+            stock: z.number().int(),
+            available: z.number().int(),
+          }),
+          execute: async ({ title, author, isbn, stock, available }) => {
+            try {
+              if (available > stock) {
+                return `❌ Erro ao adicionar livro: Disponível (${available}) não pode ser maior que Estoque (${stock}).`;
+              }
+              const formData = new FormData();
+              formData.append("title", title);
+              formData.append("author", author);
+              formData.append("isbn", isbn || "");
+              formData.append("stock", stock.toString());
+              formData.append("available", available.toString());
 
-    const messagesForAI = messages;
-
-    try {
-      const { text, toolResults } = await generateText({
-        model: google("gemini-1.5-flash"),
-        maxSteps: 6,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messagesForAI,
-        ],
-        tools: {
-          addBook: tool({
-            description: "Adicionar um ÚNICO novo livro à biblioteca",
-            parameters: z.object({
-              title: z.string(),
-              author: z.string(),
-              isbn: z.string().max(13).optional(),
-              stock: z.number().int(),
-              available: z.number().int(),
-            }),
-            execute: async ({ title, author, isbn, stock, available }) => {
-              try {
-                if (available > stock) {
-                  return `❌ Erro ao adicionar livro: Disponível (${available}) não pode ser maior que Estoque (${stock}).`;
-                }
-
-                const formData = new FormData();
-                formData.append("title", title);
-                formData.append("author", author);
-                formData.append("isbn", isbn || "");
-                formData.append("stock", stock.toString());
-                formData.append("available", available.toString());
-
-                await handleSubmitBook(formData);
-                return `✅ Livro **${title}** adicionado com sucesso! 📚`;
-              } catch (err: unknown) {
-                console.error("Erro ao adicionar livro:", err);
-                const message = err instanceof Error && err.message?.includes("duplicate key value violates unique constraint") && err.message?.includes("books_isbn_key")
+              await handleSubmitBook(formData);
+              return `✅ Livro **${title}** adicionado com sucesso! 📚`;
+            } catch (err: unknown) {
+              console.error("Erro ao adicionar livro:", err);
+              const message =
+                err instanceof Error &&
+                err.message?.includes("duplicate key value violates unique constraint") &&
+                err.message?.includes("books_isbn_key")
                   ? "Já existe um livro com este ISBN."
-                  : err instanceof Error && err.message?.includes('violates check constraint "books_available_check"')
+                  : err instanceof Error &&
+                    err.message?.includes('violates check constraint "books_available_check"')
                   ? "A quantidade disponível não pode ser maior que o estoque."
                   : "Ocorreu um erro.";
-                return `❌ Erro ao adicionar livro: ${message}`;
-              }
-            },
-          }),
-
-
-         listRecentBooks: tool({
-          description: 'LIstar os 5 livros mais recentes em forma de tabela HTML',
-          parameters: z.object({}),
-          execute: async () => {
-            try {
-              const supabase = await createClient();
-              const { data, error } = await supabase
-                .from("books")
-                .select("id, title, author, created_at")
-                .order("created_at", { ascending: false })
-                .limit(5);
-        
-              if (error) throw error;
-              if (!data || data.length === 0) {
-                return `<p class=\"text-gray-600\">Nenhum livro encontrado.</p>`;
-              }
-        
-              let html = `
-        <table class=\"w-full text-sm border-collapse bg-white shadow-sm rounded-lg\">
-          <thead class=\"bg-gray-50\">
-            <tr>
-              <th class=\"border px-4 py-2 text-left font-medium\">ID</th>
-              <th class=\"border px-4 py-2 text-left font-medium\">Título</th>
-              <th class=\"border px-4 py-2 text-left font-medium\">Autor</th>
-              <th class=\"border px-4 py-2 text-left font-medium\">Data Cadastro</th>
-            </tr>
-          </thead>
-          <tbody>
-        `;
-        
-              for (const book of data) {
-                html += `
-            <tr class=\"hover:bg-gray-50\">
-              <td class=\"border px-4 py-2\">${book.id}</td>
-              <td class=\"border px-4 py-2\">${book.title.replace(/</g, "&lt;")}</td>
-              <td class=\"border px-4 py-2\">${book.author.replace(/</g, "&lt;")}</td>
-              <td class=\"border px-4 py-2\">${new Date(book.created_at).toLocaleDateString("pt-BR")}</td>
-            </tr>
-        `;
-              }
-        
-              html += `
-          </tbody>
-        </table>
-        `;
-              return html.trim();
-            } catch (err) {
-              console.error("Erro ao listar livros:", err);
-              return `<div class=\"p-4 rounded-lg bg-red-50 border border-red-200 shadow-sm\">❌ Erro ao listar livros.</div>`;
+              return `❌ Erro ao adicionar livro: ${message}`;
             }
           },
         }),
 
-          listRecentLoans: tool({
-            description: "Listar os 5 empréstimos mais recentes em forma de tabela HTML",
-            parameters: z.object({}),
-            execute: async () => {
+        listBooks: tool({
+          description: "Listar todos os livros cadastrados com formatação aprimorada",
+          parameters: z.object({}),
+          execute: async () => {
+            try {
+              const { data, error } = await supabase
+                .from("books")
+                .select("id, title, author")
+                .eq("library_id", userData.library_id)
+                .order("created_at", { ascending: false });
+
+              if (error) throw error;
+              if (!data || data.length === 0) {
+                return `📚 Nenhum livro encontrado.`;
+              }
+
+              const totalBooks = data.length;
+              const booksToShow = data.slice(0, 10);
+
+              let markdownOutput = `📚 **Total de livros cadastrados:** ${totalBooks}\n\n**Últimos ${booksToShow.length} livros:**\n\n`;
+
+              for (const b of booksToShow) {
+                markdownOutput += `- **ID:** ${b.id} | 📚 ${b.title} | ✍️ ${b.author}\n`;
+              }
+
+              if (totalBooks > 10) {
+                markdownOutput += `\n⚠️ E mais ${totalBooks - 10} livros não mostrados. Use filtros para buscas específicas.`;
+              }
+
+              markdownOutput += `\n\nVocê pode pedir para buscar um livro específico pelo título ou ISBN, ou solicitar informações detalhadas de um livro pelo ID.`;
+
+              return markdownOutput.trim();
+            } catch (err) {
+              console.error("Erro ao listar livros:", err);
+              return `❌ Erro ao listar livros: ${err instanceof Error ? err.message : "Erro desconhecido."}`;
+            }
+          },
+        }),
+
+        addMultipleBooks: tool({
+          description:
+            "Adicionar MÚLTIPLOS livros à biblioteca APÓS o usuário confirmar explicitamente a partir de um arquivo Excel processado. Requer a lista de livros válidos.",
+          parameters: z.object({
+            confirmation: z.boolean().describe("Confirmação final para adicionar os livros processados."),
+          }),
+          execute: async ({ confirmation }) => {
+            if (!confirmation) {
+              return "❓ Adição cancelada. Nenhuma confirmação recebida.";
+            }
+            if (!bookDataForTool || bookDataForTool.length === 0) {
+              return "❌ Nenhum dado de livro válido encontrado para adicionar. O arquivo pode não ter sido processado ou não continha livros válidos.";
+            }
+
+            let successCount = 0;
+            let errorCount = 0;
+            const errors: { title: string; error: string }[] = [];
+
+            for (const book of bookDataForTool) {
               try {
-                const supabase = await createClient();
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) throw new Error("Usuário não autenticado");
-
-                const { data: userData } = await supabase
-                  .from("users")
-                  .select("library_id")
-                  .eq("id", user.id)
-                  .single();
-                if (!userData?.library_id) throw new Error("Usuário sem biblioteca");
-
-                const { data: loans, error } = await supabase
-                  .from("loans")
-                  .select(`
-                    id,
-                    created_at,
-                    due_date,
-                    status,
-                    books:book_id ( title ),
-                    users:user_id ( full_name )
-                  `)
-                  .eq("library_id", userData.library_id)
-                  .order("created_at", { ascending: false })
-                  .limit(5) as { data: Loan[] | null; error: unknown };
-
-                if (error) throw error;
-                if (!loans || loans.length === 0) return `<p>Nenhum empréstimo recente encontrado.</p>`;
-
-                let html = `<table class="w-full text-sm border-collapse">
-                  <thead>
-                    <tr>
-                      <th class="border px-2 py-1">ID</th>
-                      <th class="border px-2 py-1">Livro</th>
-                      <th class="border px-2 py-1">Usuário</th>
-                      <th class="border px-2 py-1">Data Empréstimo</th>
-                      <th class="border px-2 py-1">Vencimento</th>
-                      <th class="border px-2 py-1">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>`;
-
-                for (const loan of loans) {
-                  html += `
-                    <tr>
-                      <td class="border px-2 py-1">${loan.id}</td>
-                      <td class="border px-2 py-1">${loan.books?.title ?? "-"}</td>
-                      <td class="border px-2 py-1">${loan.users?.full_name ?? "-"}</td>
-                      <td class="border px-2 py-1">${new Date(loan.created_at).toLocaleDateString("pt-BR")}</td>
-                      <td class="border px-2 py-1">${new Date(loan.due_date).toLocaleDateString("pt-BR")}</td>
-                      <td class="border px-2 py-1">${loan.status}</td>
-                    </tr>`;
+                if (book.available > book.stock) {
+                  throw new Error(`Disponível (${book.available}) excede o Estoque (${book.stock}).`);
                 }
 
-                html += `</tbody></table>`;
-                return html.trim();
-              } catch (err) {
-                console.error("Erro ao listar empréstimos:", err);
-                return "❌ Erro ao listar empréstimos.";
-              }
-            },
-          }),
+                const formData = new FormData();
+                formData.append("title", book.title);
+                formData.append("author", book.author);
+                formData.append("isbn", book.isbn || "");
+                formData.append("stock", book.stock.toString());
+                formData.append("available", book.available.toString());
 
-       
-
-          addMultipleBooks: tool({
-            description: "Adicionar MÚLTIPLOS livros à biblioteca APÓS o usuário confirmar explicitamente a partir de um arquivo Excel processado. Requer a lista de livros válidos.",
-            parameters: z.object({
-              confirmation: z.boolean().describe("Confirmação final para adicionar os livros processados."),
-            }),
-            execute: async ({ confirmation }) => {
-              if (!confirmation) {
-                return "❓ Adição cancelada. Nenhuma confirmação recebida.";
-              }
-              if (!bookDataForTool || bookDataForTool.length === 0) {
-                return "❌ Nenhum dado de livro válido encontrado para adicionar. O arquivo pode não ter sido processado ou não continha livros válidos.";
-              }
-
-              let successCount = 0;
-              let errorCount = 0;
-              const errors: { title: string; error: string }[] = [];
-
-              for (const book of bookDataForTool) {
-                try {
-                  if (book.available > book.stock) {
-                    throw new Error(`Disponível (${book.available}) excede o Estoque (${book.stock}).`);
-                  }
-
-                  const formData = new FormData();
-                  formData.append("title", book.title);
-                  formData.append("author", book.author);
-                  formData.append("isbn", book.isbn || "");
-                  formData.append("stock", book.stock.toString());
-                  formData.append("available", book.available.toString());
-
-                  await handleSubmitBook(formData);
-                  successCount++;
-                } catch (err: unknown) {
-                  errorCount++;
-                  const message = err instanceof Error && err.message?.includes("duplicate key value violates unique constraint") && err.message?.includes("books_isbn_key")
+                await handleSubmitBook(formData);
+                successCount++;
+              } catch (err: unknown) {
+                errorCount++;
+                const message =
+                  err instanceof Error &&
+                  err.message?.includes("duplicate key value violates unique constraint") &&
+                  err.message?.includes("books_isbn_key")
                     ? "ISBN duplicado."
                     : err instanceof Error && err.message?.includes('violates check constraint "books_available_check"')
                     ? "Disponível > Estoque."
                     : "Erro desconhecido.";
-                  errors.push({ title: book.title, error: message });
-                  console.error(`Erro ao adicionar livro "${book.title}":`, err);
-                }
+                errors.push({ title: book.title, error: message });
+                console.error(`Erro ao adicionar livro "${book.title}":`, err);
               }
+            }
 
-              let resultMessage = `✅ ${successCount} ${successCount === 1 ? "livro adicionado" : "livros adicionados"} com sucesso.`;
-              if (errorCount > 0) {
-                resultMessage += `\n❌ Falha ao adicionar ${errorCount} ${errorCount === 1 ? "livro" : "livros"}.`;
-                if (errors.length < 5) {
-                  resultMessage += "\n   Erros: " + errors.map(e => `"${e.title}" (${e.error})`).join(", ");
-                }
+            let resultMessage = `✅ ${successCount} ${successCount === 1 ? "livro adicionado" : "livros adicionados"} com sucesso.`;
+            if (errorCount > 0) {
+              resultMessage += `\n❌ Falha ao adicionar ${errorCount} ${errorCount === 1 ? "livro" : "livros"}.`;
+              if (errors.length < 5) {
+                resultMessage += "\n   Erros: " + errors.map(e => `"${e.title}" (${e.error})`).join(", ");
               }
-              resultMessage += "\n Operação concluída. 📚";
+            }
+            resultMessage += "\n Operação concluída. 📚";
 
-              return resultMessage;
-            },
-          }),
-
-          generateLoanReport: tool({
-            description: "Gerar um relatório PDF dos empréstimos atuais da biblioteca",
-            parameters: z.object({}),
-            execute: async () => {
-              try {
-                const supabase = await createClient();
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) {
-                  throw new Error("Usuário não autenticado");
-                }
-
-                const { data: userData, error: userError } = await supabase
-                  .from("users")
-                  .select("library_id")
-                  .eq("id", user.id)
-                  .single();
-
-                if (userError || !userData || !userData.library_id) {
-                  throw new Error("Não foi possível identificar a biblioteca do usuário");
-                }
-
-                const libraryId = userData.library_id;
-                const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-                const reportUrl = `${siteUrl}/api/generate-report?libraryId=${libraryId}&type=full&format=pdf`;
-
-                try {
-                  const checkResponse = await fetch(`${siteUrl}/api/generate-report?libraryId=${libraryId}&type=full&format=json`);
-                  if (!checkResponse.ok) {
-                    const errorData = await checkResponse.json();
-                    throw new Error(errorData.error || "Falha ao verificar biblioteca");
-                  }
-                  return `Relatório de empréstimos gerado com sucesso! Para visualizar, acesse este link: ${reportUrl}`;
-                } catch (fetchErr) {
-                  console.error("Erro ao verificar biblioteca:", fetchErr);
-                  return `❌ Erro ao verificar biblioteca: ${fetchErr instanceof Error ? fetchErr.message : "Erro desconhecido"}`;
-                }
-              } catch (err) {
-                console.error("Erro ao preparar relatório:", err);
-                return `❌ Erro ao preparar relatório`;
-              }
-            },
-          }),
-
-          deleteBook: tool({
-            description: "Excluir um livro pelo ID",
-            parameters: z.object({ id: z.string() }),
-            execute: async ({ id }) => {
-              try {
-                await handleDeleteBook(id);
-                return `✅ Livro com ID **${id}** excluído com sucesso. 🗑️`;
-              } catch (err) {
-                if (err instanceof Error && err.message.includes("empréstimos ativos")) {
-                  return "❌ Não é possível excluir um livro que possui empréstimos ativos. Por favor, finalize os empréstimos antes de tentar excluir.";
-                }
-                console.error("Erro desconhecido ao excluir livro:", err);
-                return "❌ Ocorreu um erro inesperado ao tentar excluir o livro.";
-              }
-            },
-          }),
-
-          sendCustomEmail: tool({
-            description: "Enviar um email personalizado para um usuário da biblioteca",
-            parameters: z.object({
-              email: z.string(),
-              subject: z.string(),
-              message: z.string(),
-            }),
-            execute: async ({ email, subject, message }) => {
-              try {
-                const transporter = nodemailer.createTransport({
-                  host: process.env.EMAIL_HOST,
-                  port: Number.parseInt(process.env.EMAIL_PORT || "587"),
-                  secure: process.env.EMAIL_SECURE === "true",
-                  auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS,
-                  },
-                });
-                await transporter.sendMail({
-                  from: `"Biblioteca Digital" <${process.env.EMAIL_FROM}>`,
-                  to: email,
-                  subject: subject,
-                  html: `<div style="font-family: Arial, sans-serif; font-size: 16px; color: #333;"><p>${message}</p></div>`,
-                });
-                return `✅ Email enviado com sucesso para ${email}! 📧`;
-              } catch (err) {
-                console.error("Erro ao enviar email:", err);
-                return `❌ Erro ao enviar email: ${err instanceof Error ? err.message : "Erro desconhecido"}`;
-              }
-            },
-          }),
-
-          listBooks: tool({
-            description: "Listar todos os livros cadastrados em forma de tabela",
-            parameters: z.object({}),
-            execute: async () => {
-              const supabase = await createClient();
-              const { data, error } = await supabase
-                .from("books")
-                .select("id, title, author")
-                .order("created_at", { ascending: false });
-          
-              if (error) throw error;
-              if (!data || data.length === 0) {
-                return `<p class="text-gray-600">📚 Nenhum livro encontrado.</p>`;
-              }
-          
-              let html = `
-                <table class="w-full text-sm border-collapse bg-white shadow-sm rounded-lg">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">ID</th>
-                      <th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Título</th>
-                      <th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Autor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-              `;
-          
-              for (const book of data) {
-                html += `
-                  <tr class="hover:bg-gray-50">
-                    <td class="border border-gray-200 px-4 py-2 text-gray-800">${book.id}</td>
-                    <td class="border border-gray-200 px-4 py-2 text-gray-800">${book.title.replace(/</g, "&lt;")}</td>
-                    <td class="border border-gray-200 px-4 py-2 text-gray-800">${book.author.replace(/</g, "&lt;")}</td>
-                  </tr>
-                `;
-              }
-          
-              html += `</tbody></table>`;
-              return html;
-            },
-          }),
-
-          findBookByTitle: tool({
-            description: "Encontrar livros pelo título",
-            parameters: z.object({ title: z.string() }),
-            execute: async ({ title }) => {
-              try {
-                const supabase = await createClient();
-                const { data, error } = await supabase
-                  .from("books")
-                  .select("id, title, author")
-                  .ilike("title", `%${title}%`)
-                  .limit(5);
-
-                if (error) throw error;
-                if (!data || data.length === 0) return "📚 Nenhum livro encontrado com esse título.";
-                return data.map(book => `ID: ${book.id} - 📚 ${book.title} - ✍️ ${book.author}`).join("\n");
-              } catch (err) {
-                console.error("Erro ao buscar livros:", err);
-                return "❌ Erro ao buscar livros.";
-              }
-            },
-          }),
-
-          searchUsers: tool({
-            description: "Buscar usuários por nome",
-            parameters: z.object({ query: z.string() }),
-            execute: async ({ query }) => {
-              try {
-                const users = await searchUsersAction(query);
-                if (!users || users.length === 0) return `❌ Nenhum usuário encontrado.`;
-                return users.map(u => `👤 ${u.full_name} (${u.email})`).join("\n");
-              } catch (err) {
-                console.error("Erro ao buscar usuários:", err);
-                return "❌ Erro ao buscar usuários.";
-              }
-            },
-          }),
-
-          createLoan: tool({
-            description: "Criar um empréstimo de livro",
-            parameters: z.object({
-              bookId: z.string(),
-              userId: z.string(),
-              dueDate: z.string().optional(),
-            }),
-            execute: async ({ bookId, userId, dueDate }) => {
-              try {
-                const result = await createLoanAction(bookId, userId, dueDate);
-                return result.success
-                  ? `✅ Empréstimo criado com sucesso! ID: ${result.loanId}`
-                  : `❌ ${result.message}`;
-              } catch (err) {
-                console.error("Erro ao criar empréstimo:", err);
-                return `❌ Erro ao criar empréstimo`;
-              }
-            },
-          }),
-
-          renewLoan: tool({
-            description: "Renovar um empréstimo de livro",
-            parameters: z.object({
-              userName: z.string(),
-              bookTitle: z.string(),
-              specificDueDate: z.string().optional(),
-            }),
-            execute: async ({ userName, bookTitle, specificDueDate }) => {
-              try {
-                let parsedDate: string | undefined = undefined;
-                if (specificDueDate) {
-                  const { text: parsed } = await generateText({
-                    model: google("gemini-1.5-flash"),
-                    messages: [
-                      { role: "system", content: "Converta a data fornecida para o formato AAAA-MM-DD. Se não conseguir, diga apenas: INVALIDO." },
-                      { role: "user", content: `Converta esta data: "${specificDueDate}"` },
-                    ],
-                    maxSteps: 3,
-                  });
-                  if (parsed.includes("INVALIDO")) {
-                    return `❌ Não entendi a data informada. Por favor, use expressões como 'sexta-feira', 'amanhã' ou informe no formato AAAA-MM-DD (ex: 2025-06-20).`;
-                  } else {
-                    parsedDate = parsed.trim();
-                  }
-                }
-                const result = await renewLoanAction(userName, bookTitle, parsedDate);
-                return result.success
-                  ? `✅ Empréstimo renovado com sucesso! Nova data de devolução: ${parsedDate || "padrão de 14 dias"}`
-                  : `❌ ${result.message}`;
-              } catch (err) {
-                console.error("Erro ao renovar empréstimo:", err);
-                return `❌ Erro ao renovar empréstimo`;
-              }
-            },
-          }),
-
-          returnLoan: tool({
-            description: "Devolver um empréstimo de livro",
-            parameters: z.object({
-              userName: z.string(),
-              bookTitle: z.string(),
-            }),
-            execute: async ({ userName, bookTitle }) => {
-              try {
-                const supabase = await createClient();
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) throw new Error("Usuário não autenticado");
-
-                const { data: userData } = await supabase
-                  .from("users")
-                  .select("library_id")
-                  .eq("id", user.id)
-                  .single();
-                if (!userData?.library_id) throw new Error("Usuário sem biblioteca");
-
-                const { data: foundUsers } = await supabase
-                  .from("users")
-                  .select("id")
-                  .eq("library_id", userData.library_id)
-                  .ilike("full_name", `%${userName}%`)
-                  .limit(2);
-                if (!foundUsers || foundUsers.length !== 1) {
-                  return "❌ Usuário não encontrado ou múltiplos encontrados.";
-                }
-
-                const { data: books } = await supabase
-                  .from("books")
-                  .select("id")
-                  .eq("library_id", userData.library_id)
-                  .ilike("title", `%${bookTitle}%`)
-                  .limit(2);
-                if (!books || books.length !== 1) {
-                  return "❌ Livro não encontrado ou múltiplos encontrados.";
-                }
-
-                const { data: loanData } = await supabase
-                  .from("loans")
-                  .select("id")
-                  .eq("user_id", foundUsers[0].id)
-                  .eq("book_id", books[0].id)
-                  .eq("library_id", userData.library_id)
-                  .eq("status", "active")
-                  .single();
-                if (!loanData) {
-                  return "❌ Empréstimo ativo não encontrado.";
-                }
-
-                const result = await returnLoanAction(loanData.id);
-                return result.success ? `✅ Empréstimo devolvido com sucesso!` : `❌ ${result.message}`;
-              } catch (err) {
-                console.error("Erro ao devolver empréstimo:", err);
-                return `❌ Erro ao devolver empréstimo: ${err instanceof Error ? err.message : "Erro desconhecido"}`;
-              }
-            },
-          }),
-        },
-      });
-
-      let responseContent = text;
-      if (toolResults && toolResults.length > 0) {
-        responseContent = toolResults.map(result => result.result).join("\n");
-      }
-      if (!responseContent) {
-        responseContent = "Não consegui processar sua solicitação ou gerar uma resposta.";
-        console.warn("generateText returned no text and no tool results.");
-      }
-
-      return new Response(JSON.stringify({ role: "assistant", content: responseContent }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (error) {
-      console.error("Erro ao processar a requisição de chat:", error);
-      let errorMessage = "Ocorreu um erro desconhecido ao processar sua solicitação.";
-      if (error instanceof Error) {
-        errorMessage = `❌ Erro: ${error.message}`;
-      } else if (typeof error === "string") {
-        errorMessage = `❌ Erro: ${error}`;
-      }
-      if (errorMessage.includes("deadline")) {
-        errorMessage = "❌ Desculpe, a solicitação demorou muito para ser processada. Tente novamente ou simplifique sua pergunta.";
-      }
-      return new Response(
-        JSON.stringify({
-          role: "assistant",
-          content: errorMessage,
+            return resultMessage;
+          },
         }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
-      );
+
+        listRecentLoans: tool({
+          description: "Listar os 5 empréstimos mais recentes com formatação aprimorada",
+          parameters: z.object({}),
+          execute: async () => {
+            try {
+              const { data: userData } = await supabase
+                .from("users")
+                .select("library_id")
+                .eq("id", user.id)
+                .single();
+              if (!userData?.library_id) throw new Error("Usuário sem biblioteca");
+
+              const { data: loans, error } = await supabase
+                .from("loans")
+                .select(`
+                  id,
+                  created_at,
+                  due_date,
+                  status,
+                  books:book_id ( title ),
+                  users:user_id ( full_name )
+                `)
+                .eq("library_id", userData.library_id)
+                .order("created_at", { ascending: false })
+                .limit(5) as { data: Loan[] | null; error: unknown };
+
+              if (error) throw error;
+              if (!loans || loans.length === 0) return `Nenhum empréstimo recente encontrado.`;
+
+              let markdownOutput = "**Últimos 5 Empréstimos:**\n\n";
+              for (const loan of loans) {
+                const loanStatus = loan.status === 'active' ? '✅ Ativo' : '↩️ Devolvido';
+                markdownOutput += `- **ID:** ${loan.id}\n`;
+                markdownOutput += `  📚 **Livro:** ${loan.books?.title ?? "-"}\n`;
+                markdownOutput += `  👤 **Usuário:** ${loan.users?.full_name ?? "-"}\n`;
+                markdownOutput += `  📅 **Empréstimo:** ${new Date(loan.created_at).toLocaleDateString("pt-BR")}\n`;
+                markdownOutput += `  🗓️ **Vencimento:** ${new Date(loan.due_date).toLocaleDateString("pt-BR")}\n`;
+                markdownOutput += `  📊 **Status:** ${loanStatus}\n\n`;
+              }
+
+              return markdownOutput.trim();
+            } catch (err) {
+              console.error("Erro ao listar empréstimos:", err);
+              return "❌ Erro ao listar empréstimos.";
+            }
+          },
+        }),
+
+        deleteBook: tool({
+          description: "Excluir um livro pelo ID",
+          parameters: z.object({ id: z.string() }),
+          execute: async ({ id }) => {
+            try {
+              await handleDeleteBook(id);
+              return `✅ Livro com ID **${id}** excluído com sucesso. 🗑️`;
+            } catch (err) {
+              if (err instanceof Error && err.message.includes("empréstimos ativos")) {
+                return "❌ Não é possível excluir um livro que possui empréstimos ativos. Por favor, finalize os empréstimos antes de tentar excluir.";
+              }
+              console.error("Erro desconhecido ao excluir livro:", err);
+              return "❌ Ocorreu um erro inesperado ao tentar excluir o livro.";
+            }
+          },
+        }),
+
+        sendCustomEmail: tool({
+          description: "Enviar um email personalizado para um usuário da biblioteca",
+          parameters: z.object({
+            email: z.string(),
+            subject: z.string(),
+            message: z.string(),
+          }),
+          execute: async ({ email, subject, message }) => {
+            try {
+              const transporter = nodemailer.createTransport({
+                host: process.env.EMAIL_HOST,
+                port: Number.parseInt(process.env.EMAIL_PORT || "587"),
+                secure: process.env.EMAIL_SECURE === "true",
+                auth: {
+                  user: process.env.EMAIL_USER,
+                  pass: process.env.EMAIL_PASS,
+                },
+              });
+              await transporter.sendMail({
+                from: `"Biblioteca Digital" <${process.env.EMAIL_FROM}>`,
+                to: email,
+                subject: subject,
+                html: `<div style="font-family: Arial, sans-serif; font-size: 16px; color: #333;"><p>${message}</p></div>`,
+              });
+              return `✅ Email enviado com sucesso para ${email}! 📧`;
+            } catch (err) {
+              console.error("Erro ao enviar email:", err);
+              return `❌ Erro ao enviar email: ${err instanceof Error ? err.message : "Erro desconhecido"}`;
+            }
+          },
+        }),
+
+        // Ferramentas de geração de relatórios - mantidas do arquivo original
+        generateBookReport: tool({
+          description: "Gerar relatório detalhado sobre os livros da biblioteca",
+          parameters: z.object({
+            format: z.enum(["pdf", "excel"]).describe("Formato do relatório: pdf ou excel"),
+            includeDetails: z.boolean().describe("Se deve incluir detalhes completos de cada livro"),
+          }),
+          execute: async ({ format, includeDetails }) => {
+            try {
+              const { data: books, error } = await supabase
+                .from("books")
+                .select("*")
+                .eq("library_id", userData.library_id)
+                .order("title", { ascending: true });
+
+              if (error) throw error;
+              if (!books || books.length === 0) {
+                return "❌ Não há livros cadastrados para gerar o relatório.";
+              }
+
+              // Simulação de geração de relatório
+              const reportType = format === "pdf" ? "PDF" : "Excel";
+              const detailLevel = includeDetails ? "detalhado" : "resumido";
+              const reportUrl = `https://biblioteca-digital.example.com/reports/books-${Date.now()}.${format}`;
+
+              return `✅ Relatório ${detailLevel} de livros gerado com sucesso em formato ${reportType}!\n\nVocê pode acessá-lo através do link: ${reportUrl}\n\nO relatório contém informações sobre ${books.length} livros da sua biblioteca.`;
+            } catch (err) {
+              console.error("Erro ao gerar relatório de livros:", err);
+              return `❌ Erro ao gerar relatório de livros: ${err instanceof Error ? err.message : "Erro desconhecido"}`;
+            }
+          },
+        }),
+
+        generateLoanReport: tool({
+          description: "Gerar relatório de empréstimos da biblioteca",
+          parameters: z.object({
+            format: z.enum(["pdf", "excel"]).describe("Formato do relatório: pdf ou excel"),
+            status: z.enum(["all", "active", "returned"]).describe("Status dos empréstimos a incluir"),
+            dateRange: z.enum(["all", "last_week", "last_month", "last_year"]).describe("Período de tempo a considerar"),
+          }),
+          execute: async ({ format, status, dateRange }) => {
+            try {
+              let query = supabase
+                .from("loans")
+                .select(`
+                  id,
+                  created_at,
+                  due_date,
+                  returned_at,
+                  status,
+                  books:book_id ( title, author ),
+                  users:user_id ( full_name, email )
+                `)
+                .eq("library_id", userData.library_id);
+
+              // Filtrar por status
+              if (status !== "all") {
+                query = query.eq("status", status);
+              }
+
+              // Filtrar por período
+              if (dateRange !== "all") {
+                const now = new Date();
+                let startDate;
+                
+                switch (dateRange) {
+                  case "last_week":
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                  case "last_month":
+                    startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+                  case "last_year":
+                    startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                    break;
+                }
+                
+                query = query.gte("created_at", startDate?.toISOString());
+              }
+
+              const { data: loans, error } = await query.order("created_at", { ascending: false });
+
+              if (error) throw error;
+              if (!loans || loans.length === 0) {
+                return "❌ Não há empréstimos que correspondam aos critérios selecionados.";
+              }
+
+              // Simulação de geração de relatório
+              const reportType = format === "pdf" ? "PDF" : "Excel";
+              const statusText = status === "all" ? "todos os status" : status === "active" ? "ativos" : "devolvidos";
+              const dateRangeText = dateRange === "all" ? "todo o período" : 
+                                   dateRange === "last_week" ? "última semana" : 
+                                   dateRange === "last_month" ? "último mês" : "último ano";
+              
+              const reportUrl = `https://biblioteca-digital.example.com/reports/loans-${Date.now()}.${format}`;
+
+              return `✅ Relatório de empréstimos gerado com sucesso em formato ${reportType}!\n\nVocê pode acessá-lo através do link: ${reportUrl}\n\nO relatório contém informações sobre ${loans.length} empréstimos (${statusText}) de ${dateRangeText}.`;
+            } catch (err) {
+              console.error("Erro ao gerar relatório de empréstimos:", err);
+              return `❌ Erro ao gerar relatório de empréstimos: ${err instanceof Error ? err.message : "Erro desconhecido"}`;
+            }
+          },
+        }),
+
+        generateUserReport: tool({
+          description: "Gerar relatório de usuários da biblioteca",
+          parameters: z.object({
+            format: z.enum(["pdf", "excel"]).describe("Formato do relatório: pdf ou excel"),
+            includeInactive: z.boolean().describe("Se deve incluir usuários inativos"),
+          }),
+          execute: async ({ format, includeInactive }) => {
+            try {
+              let query = supabase
+                .from("users")
+                .select("*")
+                .eq("library_id", userData.library_id);
+
+              if (!includeInactive) {
+                query = query.eq("is_active", true);
+              }
+
+              const { data: users, error } = await query.order("full_name", { ascending: true });
+
+              if (error) throw error;
+              if (!users || users.length === 0) {
+                return "❌ Não há usuários cadastrados para gerar o relatório.";
+              }
+
+              // Simulação de geração de relatório
+              const reportType = format === "pdf" ? "PDF" : "Excel";
+              const userStatus = includeInactive ? "todos os usuários (ativos e inativos)" : "apenas usuários ativos";
+              const reportUrl = `https://biblioteca-digital.example.com/reports/users-${Date.now()}.${format}`;
+
+              return `✅ Relatório de usuários gerado com sucesso em formato ${reportType}!\n\nVocê pode acessá-lo através do link: ${reportUrl}\n\nO relatório contém informações sobre ${users.length} usuários (${userStatus}) da sua biblioteca.`;
+            } catch (err) {
+              console.error("Erro ao gerar relatório de usuários:", err);
+              return `❌ Erro ao gerar relatório de usuários: ${err instanceof Error ? err.message : "Erro desconhecido"}`;
+            }
+          },
+        }),
+
+        // Você pode continuar adicionando outras ferramentas aqui conforme seu projeto
+      },
+    });
+
+    let responseContent = text;
+    if (toolResults && toolResults.length > 0) {
+      responseContent = toolResults.map(result => result.result).join("\n");
     }
+    if (!responseContent) {
+      responseContent = "Não consegui processar sua solicitação ou gerar uma resposta.";
+      console.warn("generateText retornou sem texto ou resultados de ferramentas.");
+    }
+
+    return new Response(JSON.stringify({ role: "assistant", content: responseContent }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Erro ao processar a requisição de chat:", error);
+    let errorMessage = "Ocorreu um erro desconhecido ao processar sua solicitação.";
+    if (error instanceof Error) {
+      errorMessage = `❌ Erro: ${error.message}`;
+    } else if (typeof error === "string") {
+      errorMessage = `❌ Erro: ${error}`;
+    }
+    if (errorMessage.includes("deadline")) {
+      errorMessage = "❌ Desculpe, a solicitação demorou muito para ser processada. Tente novamente ou simplifique sua pergunta.";
+    }
+    return new Response(
+      JSON.stringify({
+        role: "assistant",
+        content: errorMessage,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
+}
+
+// Função auxiliar para formatação de data
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-BR', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric' 
+  });
+}

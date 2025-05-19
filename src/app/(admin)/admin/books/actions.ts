@@ -438,15 +438,18 @@ export const getAllDashboardData = cache(async () => {
       recentLoansResponse,
     ] = await Promise.all([
       Promise.all([
-        supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
-        supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
-        supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
-        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
-        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
-        supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
-        supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
-        supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
-        supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+      supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId),
+  supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+  supabase.from("books").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+  
+  // Aqui para users, deve filtrar por role = "student"
+  supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("role", "student"),
+  supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("role", "student").gte("created_at", lastMonth.toISOString()),
+  supabase.from("users").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("role", "student").gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
+
+  supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).eq("status", "active"),
+  supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", lastMonth.toISOString()),
+  supabase.from("loans").select("*", { count: "exact", head: true }).eq("library_id", libraryId).gte("created_at", twoMonthsAgo.toISOString()).lt("created_at", lastMonth.toISOString()),
       ]),
       (async () => {
         const months = [];
