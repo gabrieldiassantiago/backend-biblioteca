@@ -338,10 +338,11 @@ export async function getLibraryBySlug(slug: string) {
   return library;
 }
 
+
 // Função para buscar livros por biblioteca
 export async function getBooksByLibraryId(libraryId: string, searchQuery: string, page: number, limit: number) {
   const supabase = await createClient();
-  let query = supabase.from("books").select("*", { count: "exact" }).eq("library_id", libraryId);
+  let query = supabase.from("books").select("id, title, author, isbn, available, stock, image_url", { count: "exact" }).eq("library_id", libraryId);
 
   if (searchQuery) {
     query = query.or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`);
@@ -356,6 +357,7 @@ export async function getBooksByLibraryId(libraryId: string, searchQuery: string
   }
   return { books, count };
 }
+
 
 // funcao para obter sessão do usuário
 export async function getUserSession() {

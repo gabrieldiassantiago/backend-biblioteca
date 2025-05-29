@@ -11,9 +11,9 @@ import { BookLoanChart } from "@/components/dashboard/book-loan-chart"
 import { LoanStatusChart } from "@/components/dashboard/loan-status-chart"
 import { PopularBooksTable } from "@/components/dashboard/popular-books-table"
 import { RecentLoansTable } from "@/components/dashboard/recent-loans-table"
-import { getAllDashboardData } from "./books/actions"
 import { StatCard } from "@/components/dashboard/StatCard"
 import { Button } from "@/components/ui/button"
+import { getAllDashboardData } from "./books/dashboard-actions"
 
 // Interfaces
 interface DashboardStat {
@@ -143,14 +143,12 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <motion.div
+<div className="min-h-screen rounded-2xl bg-gray-50 text-foreground transition-colors">      <motion.div
         className="mx-auto space-y-6 p-6 max-w-7xl"
         initial="hidden"
         animate="show"
         variants={container}
       >
-        {/* Header com design minimalista */}
         <motion.div variants={item} className="dashboard-header">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
             <div className="flex items-center gap-3">
@@ -158,8 +156,7 @@ export default function AdminDashboardPage() {
                 <Library className="h-6 w-6 text-violet-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-                {loading ? (
+<h1 className="text-2xl font-bold text-foreground">Dashboard</h1>                {loading ? (
                   <Skeleton className="h-5 w-40" />
                 ) : (
                   <p className="text-sm text-gray-500">{libraryName}</p>

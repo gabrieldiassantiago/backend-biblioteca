@@ -27,6 +27,7 @@ export async function getLibrarySettings(): Promise<LibrarySettings | null> {
     .from("users")
     .select("full_name, library_id")
     .eq("id", user.id)
+    //admin
     .single();
 
   if (userDataError || !userData) {

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { handleDeleteBook, handleSubmitBook } from "@/app/(admin)/admin/books/actions";
+import { handleDeleteBook, handleSubmitBook } from "@/app/(admin)/admin/books/book-actions";
 import { generateText, tool } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";

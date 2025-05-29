@@ -3,6 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BookOpen, Users, ClipboardList, Clock, CheckCircle, AlertTriangle } from "lucide-react";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReportsLoanStatusChart } from "./reports-loan-status-chart";
+import { ReportsMonthlyLoansChart } from "./reports-monthly-loans-chart";
+
+// Interfaces para os dados dos gráficos
+interface MonthlyLoanData {
+  name: string;
+  emprestimos: number;
+}
+
+interface LoanStatusData {
+  name: string;
+  value: number;
+  color: string;
+}
 
 function ReportsSkeleton() {
   return (
@@ -21,6 +35,10 @@ function ReportsSkeleton() {
             </div>
           </div>
         ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Skeleton className="h-[350px] w-full" />
+        <Skeleton className="h-[350px] w-full" />
       </div>
     </div>
   );
@@ -56,7 +74,7 @@ async function ReportsPage() {
 
   const libraryId = userData.library_id;
 
-  // Buscar totais filtrados pela library_id
+  // Fetch all counts
   const { count: totalAlunos } = await supabase
     .from("users")
     .select("*", { count: "exact", head: true })
@@ -90,6 +108,54 @@ async function ReportsPage() {
     .select("*", { count: "exact", head: true })
     .eq("status", "overdue")
     .eq("library_id", libraryId);
+
+  // Fetch monthly loans data (real data from Supabase)
+  const { data: monthlyLoansRaw, error: monthlyLoansError } = await supabase
+    .from("loans")
+    .select("created_at")
+    .eq("library_id", libraryId)
+    .gte("created_at", new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString()) // Últimos 12 meses
+    .order("created_at", { ascending: true });
+
+  if (monthlyLoansError) {
+    console.error("Erro ao buscar dados de empréstimos mensais:", monthlyLoansError);
+    throw new Error("Erro ao carregar dados de empréstimos mensais");
+  }
+
+  // Processar dados para o formato do gráfico
+  const monthlyLoansData: MonthlyLoanData[] = [];
+  const months = [
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+  ];
+
+  // Inicializar array com 12 meses zerados
+  const monthlyCounts: { [key: string]: number } = {};
+  months.forEach((month, index) => {
+    monthlyCounts[index] = 0;
+  });
+
+  // Contar empréstimos por mês
+  monthlyLoansRaw.forEach((loan) => {
+    const date = new Date(loan.created_at);
+    const monthIndex = date.getMonth();
+    monthlyCounts[monthIndex]++;
+  });
+
+  // Formatar dados para o gráfico
+  months.forEach((month, index) => {
+    monthlyLoansData.push({
+      name: month,
+      emprestimos: monthlyCounts[index],
+    });
+  });
+
+  // Prepare data for loan status chart
+  const loanStatusData: LoanStatusData[] = [
+    { name: "Ativos", value: emprestimosAtivos ?? 0, color: "#f59e0b" }, // amber-500
+    { name: "Devolvidos", value: emprestimosDevolvidos ?? 0, color: "#10b981" }, // emerald-500
+    { name: "Atrasados", value: emprestimosAtrasados ?? 0, color: "#ef4444" }, // red-500
+  ];
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 space-y-8">
@@ -160,6 +226,12 @@ async function ReportsPage() {
             <CardDescription>Empréstimos em atraso</CardDescription>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ReportsMonthlyLoansChart data={monthlyLoansData} loading={false} />
+        <ReportsLoanStatusChart data={loanStatusData} loading={false} />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { getLibraryBySlug, getBooksByLibraryId, getUserSession } from "./actions"
 import { Suspense } from "react"
 import LibraryLoading from "@/components/library/LibraryLoading"
+import { Book } from "@/types/lbrary"
 
 export default async function LibraryPage({
   params,
@@ -27,12 +28,12 @@ export default async function LibraryPage({
   const isSearched = !!searchQuery
 
   // Buscar livros apenas se houver um termo de busca
-  let books = []
+  let books: Book[] = []
   let count = 0
 
   if (isSearched) {
     const result = await getBooksByLibraryId(library.id, searchQuery, page, limit)
-    books = result.books
+    books = result.books as Book[]
     count = result.count || 0
   }
 

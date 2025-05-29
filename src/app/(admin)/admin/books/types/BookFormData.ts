@@ -15,6 +15,7 @@ export interface Library {
     available: number
     created_at: string
     updated_at: string
+    image_url: string | null
   }
   
   export interface BookFormData {
@@ -25,5 +26,6 @@ export interface Library {
     stock: number
     available: number
     library_id: string
+    image_url: string | null
   }
   

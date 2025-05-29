@@ -14,6 +14,7 @@ type Book = {
   library_id: string;
   created_at: string;
   updated_at: string;
+  image_url: string | null;
 };
 
 type EditBookButtonProps = {
