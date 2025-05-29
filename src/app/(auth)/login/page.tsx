@@ -18,17 +18,28 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   async function handleLogin(formData: FormData) {
     'use server';
-    const supabase = await createClient();
+    
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const supabase = await createClient();
+      
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
 
-    if (authError) {
-      redirect('/login?error=Email ou senha inválidos');
-    }
+      if (authError) {
+        console.error('Erro de autenticação:', authError);
+        redirect('/login?error=Email ou senha inválidos');
+      }
 
-    if (data.user) {
+      if (!data.user) {
+        redirect('/login?error=Falha na autenticação');
+      }
+
+      // Verificar role do usuário
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('role')
@@ -36,16 +47,30 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         .single();
 
       if (userError || !userData) {
-        await supabase.auth.signOut();
+        console.error('Erro ao verificar usuário:', userError);
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error('Erro ao fazer signOut:', signOutError);
+        }
         redirect('/login?error=Erro ao verificar permissões');
       }
 
-      if (userData.role === 'admin') {
-        redirect('/admin/');
-      } else {
-        await supabase.auth.signOut();
+      if (userData.role !== 'admin') {
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error('Erro ao fazer signOut:', signOutError);
+        }
         redirect('/login?error=Apenas administradores podem acessar');
       }
+
+      // Se chegou até aqui, é admin
+      redirect('/admin/');
+      
+    } catch (error) {
+      console.error('Erro geral no login:', error);
+      redirect('/login?error=Seus dados não conferem');
     }
   }
 

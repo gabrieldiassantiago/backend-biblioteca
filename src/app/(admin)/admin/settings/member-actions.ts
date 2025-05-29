@@ -17,6 +17,8 @@ export interface NewMemberData {
   role: string
 }
 
+
+
 // Buscar todos os membros da biblioteca atual
 export async function getLibraryMembers(): Promise<LibraryMember[]> {
   const supabase = await createClient()
@@ -36,6 +38,7 @@ export async function getLibraryMembers(): Promise<LibraryMember[]> {
     .from("users")
     .select("library_id")
     .eq("id", user.id)
+    
     .single()
 
   if (userDataError || !userData?.library_id) {
@@ -46,7 +49,9 @@ export async function getLibraryMembers(): Promise<LibraryMember[]> {
   const { data: members, error: membersError } = await supabase
     .from("users")
     .select("id, full_name, email, role, created_at")
+    .eq("role", "admin") // Only fetch members, not admins
     .eq("library_id", userData.library_id)
+    
     .order("created_at", { ascending: false })
 
   if (membersError) {

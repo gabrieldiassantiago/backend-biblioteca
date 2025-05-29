@@ -26,6 +26,7 @@ export async function getLibrarySettings(): Promise<LibrarySettings | null> {
   const { data: userData, error: userDataError } = await supabase
     .from("users")
     .select("full_name, library_id")
+    .eq("role", "admin") // Ensure only admins can access settings
     .eq("id", user.id)
     //admin
     .single();
