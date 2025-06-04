@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PieChartIcon, MoreVertical } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -12,8 +12,6 @@ interface LoanStatusData {
   value: number
   color: string
 }
-
-
 
 export function LoanStatusChart({
   data,
@@ -48,12 +46,25 @@ export function LoanStatusChart({
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
+  // Função customizada para renderizar a legenda
+  const renderLegend = (props: { payload?: Array<{ value: string; color?: string }> }) => {
+    const { payload } = props
+    if (!payload) return null
 
-
-
+    return (
+      <div className="flex flex-wrap justify-center gap-4 mt-4">
+        {payload.map((entry, index: number) => (
+          <div key={index} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color || "#8884d8" }} />
+            <span className="text-sm text-gray-600 dark:text-gray-400">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
-     <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -84,7 +95,7 @@ export function LoanStatusChart({
             <Skeleton className="h-40 w-40 rounded-full" />
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
                 data={data}
@@ -99,7 +110,17 @@ export function LoanStatusChart({
                   <Cell key={i} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip
+                formatter={(value: number) => [value, "Quantidade"]}
+                labelStyle={{ color: "#374151" }}
+                contentStyle={{
+                  backgroundColor: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                }}
+              />
+              <Legend content={renderLegend} />
             </PieChart>
           </ResponsiveContainer>
         )}
