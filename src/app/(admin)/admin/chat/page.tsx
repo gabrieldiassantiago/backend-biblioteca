@@ -1,4 +1,4 @@
-import { AdminChatInterface } from "@/components/chat/admin-chat-interface"
+import { LibraryChatInterface } from "@/components/chat/admin-chat-interface"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function AdminChatPage() {
   return (
-    <div className="h-[calc(100vh-6rem)] w-full overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
-      <AdminChatInterface />
+    <div className=" w-full overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
+      <LibraryChatInterface />
     </div>
   )
 }
