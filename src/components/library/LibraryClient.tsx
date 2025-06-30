@@ -214,7 +214,9 @@ export default function LibraryClient({
           <BookMarked className="h-12 w-12 text-indigo-500" />
         </div>
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Bem-vindo à Biblioteca {library.name}</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 max-w-2xl mx-auto break-words">
+        Bem-vindo à Biblioteca {library.name}
+      </h1>
       <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-8 text-lg">
         {user
           ? "Explore nossa coleção de livros, faça empréstimos e gerencie sua conta de forma simples e intuitiva."
@@ -236,7 +238,7 @@ export default function LibraryClient({
             className="border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 px-8 py-3 rounded-xl transition-all duration-200"
           >
             <UserPlus className="mr-2 h-5 w-5" />
-            Criar Conta Grátis
+            Criar sua conta
           </Button>
         </div>
       )}
@@ -296,7 +298,7 @@ export default function LibraryClient({
                 <Library className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{library.name}</h2>
+                <h2 className="text-sm max-w-2xl font-bold text-gray-900 dark:text-white">{library.name}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Sistema de Biblioteca</p>
               </div>
             </Link>
@@ -431,7 +433,7 @@ export default function LibraryClient({
                   onClick={() => setIsModalOpen(true)}
                   className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
                 >
-                  Login / Registro
+                 Fazer login
                 </Button>
               )}
             </div>
@@ -457,13 +459,17 @@ export default function LibraryClient({
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                         {count} resultado{count !== 1 ? "s" : ""} para {searchQuery}
                       </h2>
-                      <Button
-                        variant="ghost"
-                        onClick={() => router.push(`/biblioteca/${params.slug}`)}
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                      >
-                        Limpar busca
-                      </Button>
+                    <Button
+  variant="ghost"
+  onClick={() => {
+    setSearchTerm("");
+    router.push(`/biblioteca/${params.slug}`);
+  }}
+  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+>
+  Limpar busca
+</Button>
+
                     </div>
 
                     <motion.div

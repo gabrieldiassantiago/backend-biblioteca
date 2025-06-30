@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, BookOpen, CheckCircle, UserPlus, LogIn, Mail, Lock, User, Calendar, School, Eye, EyeOff } from 'lucide-react';
@@ -69,6 +69,22 @@ export default function BorrowModal({ isOpen, onClose, bookId, libraryId, slug, 
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+  if (!isOpen) {
+    setSuccess(null);
+    setError(null);
+    setIsLoading(false);
+    setIsRegistering(true);
+    setFormData({
+      fullName: "",
+      email: "",
+      password: "",
+      class: "",
+      grade: "",
+    });
+  }
+}, [isOpen]);
 
   const handleLoginSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

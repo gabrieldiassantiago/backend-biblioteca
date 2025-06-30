@@ -251,8 +251,15 @@ export async function handleBorrow(formData: FormData) {
 export async function handleLogout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  revalidatePath("/");
-  redirect("/");
+
+  const currentPath = window.location.pathname;
+
+  if (currentPath.startsWith("/biblioteca/")) {
+    //redirecionar para a biblioteca atual dele
+    redirect(`/biblioteca/${currentPath.split("/")[2]}`);
+  }
+  
+  
 }
 
 // Função para buscar empréstimos de um usuário

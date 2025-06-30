@@ -49,23 +49,8 @@ export function NotificationCenter({
         message: `${overdueLoansCount} empréstimos estão em atraso`,
         time: "5 min atrás",
         read: false,
-      },
-      {
-        id: "3",
-        type: "system" as const,
-        title: "Backup Realizado",
-        message: "Backup automático dos dados foi concluído com sucesso",
-        time: "1 hora atrás",
-        read: true,
-      },
-      {
-        id: "4",
-        type: "success" as const,
-        title: "Novo Livro Adicionado",
-        message: '"Dom Casmurro" foi adicionado ao catálogo',
-        time: "2 horas atrás",
-        read: true,
-      },
+      }
+
     ].filter((notification) => {
       if (notification.type === "loan" && recentLoansCount === 0) return false
       if (notification.type === "overdue" && overdueLoansCount === 0) return false
