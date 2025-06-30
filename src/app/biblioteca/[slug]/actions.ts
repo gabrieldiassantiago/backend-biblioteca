@@ -257,6 +257,7 @@ export async function handleLogout() {
   if (currentPath.startsWith("/biblioteca/")) {
     //redirecionar para a biblioteca atual dele
     redirect(`/biblioteca/${currentPath.split("/")[2]}`);
+    //foi
   }
   
   
