@@ -214,7 +214,9 @@ export default function LibraryClient({
           <BookMarked className="h-12 w-12 text-indigo-500" />
         </div>
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Bem-vindo à Biblioteca {library.name}</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 break-words">
+        Bem-vindo à Biblioteca {library.name}
+      </h1>
       <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-8 text-lg">
         {user
           ? "Explore nossa coleção de livros, faça empréstimos e gerencie sua conta de forma simples e intuitiva."
@@ -295,8 +297,10 @@ export default function LibraryClient({
               <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
                 <Library className="h-5 w-5 text-white" />
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{library.name}</h2>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+                  {library.name}
+                </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Sistema de Biblioteca</p>
               </div>
             </Link>
