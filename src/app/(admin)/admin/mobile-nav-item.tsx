@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, HelpCircle } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import type React from "react"
@@ -14,9 +14,12 @@ interface MobileNavItemProps {
   description?: string
   badge?: number | null
   color?: string
+  disabled?: boolean
 }
 
-export function MobileNavItem({ href, icon: Icon, label, description, badge, color }: MobileNavItemProps) {
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+export function MobileNavItem({ href, icon: Icon, label, description, badge, color, disabled = false }: MobileNavItemProps) {
   const pathname = usePathname()
 
   const isActive = pathname === href || (href !== "/admin" && pathname.startsWith(href))
@@ -54,16 +57,16 @@ export function MobileNavItem({ href, icon: Icon, label, description, badge, col
 
   const colorKey = (color as keyof typeof colorClasses) || "blue"
 
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "group flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 ease-in-out relative overflow-hidden",
-        isActive
-          ? `${colorClasses[colorKey].active} transform scale-[1.02]`
-          : `text-slate-600 ${colorClasses[colorKey].inactive}`,
-      )}
-    >
+  const containerClasses = cn(
+    "group flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 ease-in-out relative overflow-hidden",
+    isActive
+      ? `${colorClasses[colorKey].active} transform scale-[1.02]`
+      : `text-slate-600 ${colorClasses[colorKey].inactive}`,
+    disabled && "pointer-events-none opacity-60"
+  )
+
+  const content = (
+    <>
       {/* Efeito de brilho quando ativo */}
       {isActive && (
         <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-50 animate-pulse" />
@@ -106,12 +109,33 @@ export function MobileNavItem({ href, icon: Icon, label, description, badge, col
         </div>
       </div>
 
-      <ChevronRight
-        className={cn(
-          "h-4 w-4 transition-colors duration-300 relative z-10",
-          isActive ? "text-white" : "text-slate-400 group-hover:text-current",
-        )}
-      />
+      {disabled ? (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <HelpCircle className="h-4 w-4 text-slate-400" />
+            </TooltipTrigger>
+            <TooltipContent side="right">Em manutenção</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        <ChevronRight
+          className={cn(
+            "h-4 w-4 transition-colors duration-300 relative z-10",
+            isActive ? "text-white" : "text-slate-400 group-hover:text-current",
+          )}
+        />
+      )}
+    </>
+  )
+
+  if (disabled) {
+    return <div className={containerClasses}>{content}</div>
+  }
+
+  return (
+    <Link href={href} className={containerClasses}>
+      {content}
     </Link>
   )
 }

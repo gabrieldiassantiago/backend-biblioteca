@@ -41,6 +41,7 @@ export function Navigation({ recentLoansCount, isMobile = false }: NavigationPro
       icon: MessageCircle,
       label: "Chat IA",
       description: "Use IA para automatizar suas tarefas",
+      disabled: true,
     },
     {
       href: "/admin/settings",
