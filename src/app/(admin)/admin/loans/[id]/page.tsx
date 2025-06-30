@@ -11,6 +11,7 @@ import Link from "next/link"
 import { getUserLibraryId } from "../actions"
 import { Suspense } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { UpdateLoanForm } from "@/components/loans/update-loan-form"
 
 // Definir tipos para os dados retornados pelo Supabase
 interface BookDetails {
@@ -343,6 +344,13 @@ async function LoanDetailsPageAsync({ params }: LoanDetailsPageProps) {
                   {loan.status === "overdue" && "Devolução atrasada"}
                   {loan.status === "rejected" && "Empréstimo rejeitado"}
                 </p>
+              </div>
+              <div className="mt-4">
+                <UpdateLoanForm
+                  loanId={loan.id}
+                  currentStatus={loan.status}
+                  currentDueDate={loan.due_date}
+                />
               </div>
             </CardContent>
             <Separator />
