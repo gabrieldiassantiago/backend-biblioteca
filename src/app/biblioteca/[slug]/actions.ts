@@ -260,7 +260,6 @@ export async function handleLogout() {
     //foi
   }
   
-  
 }
 
 // Função para buscar empréstimos de um usuário

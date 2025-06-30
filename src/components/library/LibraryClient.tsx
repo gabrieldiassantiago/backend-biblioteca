@@ -343,10 +343,11 @@ export default function LibraryClient({
         </Sidebar>
 
         <SidebarInset className="flex-1">
-          {/* Header */}
-          <header className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <SidebarTrigger className="md:hidden" />
+    
+        <header className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+          <div className="flex flex-wrap items-center gap-4 px-4 py-4 md:px-6">
+            {/* Sidebar trigger sempre visível no mobile */}
+            <SidebarTrigger className="md:hidden" />
 
               {/* Search Bar - Centralizada */}
               <div className="flex-1 max-w-2xl mx-auto">

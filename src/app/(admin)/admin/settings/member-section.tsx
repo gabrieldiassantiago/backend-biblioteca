@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, Plus, Edit, Trash2, Mail, User, Shield, Loader2 } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Mail,
+  User,
+  Shield,
+  Loader2,
+  HelpCircle
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +61,13 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+import {
   getLibraryMembers,
   addLibraryMember,
   updateLibraryMember,
@@ -58,6 +75,11 @@ import {
   type LibraryMember,
   type NewMemberData,
 } from "./member-actions";
+
+// -----------------------------------------------------
+// Se quiser, pode transformar em prop vinda de fora
+const areaDesativada = true;
+// -----------------------------------------------------
 
 const ROLES = [
   { value: "diretor", label: "Diretor" },
@@ -89,7 +111,6 @@ export default function MembersManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Form states
   const [newMember, setNewMember] = useState<NewMemberData>({
     fullName: "",
     email: "",
@@ -102,7 +123,6 @@ export default function MembersManagement() {
     role: "",
   });
 
-  // Load members on component mount
   useEffect(() => {
     loadMembers();
   }, []);
@@ -203,7 +223,29 @@ export default function MembersManagement() {
   }
 
   return (
-    <Card>
+    <Card className="relative">
+      {/* Overlay de desativação */}
+      {areaDesativada && (
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-20 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2 text-slate-600 text-center px-4">
+            <Shield className="w-6 h-6" />
+            <span className="text-sm font-medium">Área temporariamente desativada</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-5 w-5 text-slate-500 hover:text-slate-700 cursor-pointer pointer-events-auto" />
+                </TooltipTrigger>
+                <TooltipContent>
+               Essa seria a aba de gerenciamento de novos adminstradores da biblioteca! 
+               Estamos trabalhando nela para você e logo estará disponível!
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+      )}
+
+      {/* CONTINUA normalmente abaixo */}
       <CardHeader className="border-b">
         <div className="flex items-center justify-between">
           <div>
@@ -372,8 +414,7 @@ export default function MembersManagement() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remover Membro</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Tem certeza que deseja remover <strong>{member.full_name}</strong> da biblioteca?
-                              Esta ação não pode ser desfeita.
+                              Tem certeza que deseja remover <strong>{member.full_name}</strong>?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -395,90 +436,6 @@ export default function MembersManagement() {
           </Table>
         )}
       </CardContent>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Membro</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do membro da biblioteca.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditMember}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nome Completo</Label>
-                <Input
-                  id="edit-name"
-                  value={editMember.fullName}
-                  onChange={(e) =>
-                    setEditMember({ ...editMember, fullName: e.target.value })
-                  }
-                  placeholder="Digite o nome completo"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editMember.email}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">
-                  O email não pode ser alterado após o cadastro.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Cargo</Label>
-                <Select
-                  value={editMember.role}
-                  onValueChange={(value) =>
-                    setEditMember({ ...editMember, role: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o cargo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {error && (
-                <div className="text-sm text-red-500 bg-red-50 p-2 rounded">
-                  {error}
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  "Salvar Alterações"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }
