@@ -174,9 +174,10 @@ export async function handleBorrow(formData: FormData) {
     throw new Error("Erro ao buscar usuário.");
   }
 
-  if (userData.role !== "admin") {
-    console.error("Usuário não autorizado para empréstimos:", userData.role);
-    throw new Error("Você não possui autorização para realizar empréstimos.");
+  //se usuario for admin, nao pode pegar emprestado
+  if (userData.role === "admin") {
+    console.error("Usuário não tem permissão para realizar empréstimos.");
+    throw new Error("Você não tem permissão para realizar empréstimos, pois é um administrador.");
   }
 
   // Verificar se o usuário já tem um empréstimo "active"
@@ -327,7 +328,7 @@ export async function getLibraryBySlug(slug: string) {
   const { data: library, error } = await supabase
     .from("libraries")
     .select("*")
-    .eq("name", slug)
+    .eq("slug", slug)
     .single();
 
   if (error || !library) {
@@ -337,10 +338,11 @@ export async function getLibraryBySlug(slug: string) {
   return library;
 }
 
+
 // Função para buscar livros por biblioteca
 export async function getBooksByLibraryId(libraryId: string, searchQuery: string, page: number, limit: number) {
   const supabase = await createClient();
-  let query = supabase.from("books").select("*", { count: "exact" }).eq("library_id", libraryId);
+  let query = supabase.from("books").select("id, title, author, isbn, available, stock, image_url", { count: "exact" }).eq("library_id", libraryId);
 
   if (searchQuery) {
     query = query.or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`);
@@ -355,6 +357,7 @@ export async function getBooksByLibraryId(libraryId: string, searchQuery: string
   }
   return { books, count };
 }
+
 
 // funcao para obter sessão do usuário
 export async function getUserSession() {

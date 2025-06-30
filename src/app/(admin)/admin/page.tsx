@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { Book, Users, BookOpen, Library, TrendingUp } from "lucide-react"
+import { Book, Users, BookOpen, Library, RefreshCw } from 'lucide-react'
 import { motion } from "framer-motion"
 
 import { Skeleton } from "@/components/ui/skeleton"
@@ -11,8 +11,9 @@ import { BookLoanChart } from "@/components/dashboard/book-loan-chart"
 import { LoanStatusChart } from "@/components/dashboard/loan-status-chart"
 import { PopularBooksTable } from "@/components/dashboard/popular-books-table"
 import { RecentLoansTable } from "@/components/dashboard/recent-loans-table"
-import { getAllDashboardData } from "./books/actions"
 import { StatCard } from "@/components/dashboard/StatCard"
+import { Button } from "@/components/ui/button"
+import { getAllDashboardData } from "./books/dashboard-actions"
 
 // Interfaces
 interface DashboardStat {
@@ -60,33 +61,33 @@ const initialStats: DashboardStat[] = [
 
 // Componente principal do Dashboard
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<DashboardStat[]>(initialStats)
-  const [monthlyLoans, setMonthlyLoans] = useState<MonthlyLoanData[]>([])
-  const [loanStatus, setLoanStatus] = useState<LoanStatusData[]>([])
-  const [popularBooks, setPopularBooks] = useState<PopularBook[]>([])
-  const [recentLoans, setRecentLoans] = useState<RecentLoan[]>([])
-  const [libraryName, setLibraryName] = useState<string>("...")
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStat[]>(initialStats);
+  const [monthlyLoans, setMonthlyLoans] = useState<MonthlyLoanData[]>([]);
+  const [loanStatus, setLoanStatus] = useState<LoanStatusData[]>([]);
+  const [popularBooks, setPopularBooks] = useState<PopularBook[]>([]);
+  const [recentLoans, setRecentLoans] = useState<RecentLoan[]>([]);
+  const [libraryName, setLibraryName] = useState<string>("...");
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Função para buscar dados
   const fetchDashboardData = async () => {
     try {
-      const data = await getAllDashboardData()
+      setIsRefreshing(true);
+      const data = await getAllDashboardData();
 
-      // Atualizar com cores mais vibrantes para o gráfico de status
       const updatedLoanStatus = data.loanStatus.map((status, index) => {
         const colors = [
-          "#4338ca", // indigo-700
-          "#059669", // emerald-600
-          "#e11d48", // rose-600
-          "#d97706", // amber-600
-          "#7c3aed", // violet-600
-        ]
+          "#8b5cf6", // violet-500
+          "#14b8a6", // teal-500
+          "#f43f5e", // rose-500
+          "#f59e0b", // amber-500
+          "#8b5cf6", // violet-500
+        ];
         return {
           ...status,
           color: colors[index % colors.length],
-        }
-      })
+        };
+      });
 
       setStats([
         {
@@ -96,8 +97,8 @@ export default function AdminDashboardPage() {
           trend: `${data.stats.booksTrend > 0 ? "+" : ""}${data.stats.booksTrend}%`,
         },
         {
-          title: "Usuários Ativos",
-          value: data.stats.activeUsers.toString(),
+          title: "Total de Usuários",
+          value: data.stats.totalUsers.toString(),
           icon: Users,
           trend: `${data.stats.usersTrend > 0 ? "+" : ""}${data.stats.usersTrend}%`,
         },
@@ -107,23 +108,24 @@ export default function AdminDashboardPage() {
           icon: BookOpen,
           trend: `${data.stats.loansTrend > 0 ? "+" : ""}${data.stats.loansTrend}%`,
         },
-      ])
-      setMonthlyLoans(data.monthlyLoans)
-      setLoanStatus(updatedLoanStatus)
-      setPopularBooks(data.popularBooks)
-      setRecentLoans(data.recentLoans)
-      setLibraryName(data.libraryName || "Biblioteca Sem Nome")
+      ]);
+      setMonthlyLoans(data.monthlyLoans);
+      setLoanStatus(updatedLoanStatus);
+      setPopularBooks(data.popularBooks);
+      setRecentLoans(data.recentLoans);
+      setLibraryName(data.libraryName || "Biblioteca Sem Nome");
     } catch (error) {
-      console.error("Erro ao carregar dados do dashboard:", error)
-      setLibraryName("Erro ao carregar nome")
+      console.error("Erro ao carregar dados do dashboard:", error);
+      setLibraryName("Erro ao carregar nome");
     } finally {
-      setLoading(false)
+      setLoading(false);
+      setIsRefreshing(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    fetchDashboardData();
+  }, []);
 
   const container = {
     hidden: { opacity: 0 },
@@ -141,40 +143,40 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen ">
-      <motion.div
-        className="mx-auto space-y-6 p-4 md:p-8 max-w-7xl"
+<div className="min-h-screen rounded-2xl bg-gray-50 text-foreground transition-colors">      <motion.div
+        className="mx-auto space-y-6 p-6 max-w-7xl"
         initial="hidden"
         animate="show"
         variants={container}
       >
-        {/* Header com design sutil e integrado */}
         <motion.div variants={item} className="dashboard-header">
-          <div className="rounded-lg bg-white p-4 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="flex items-center gap-2 text-gray-700">
-                <Library className="h-4 w-4 text-indigo-600" />
-                <span className="text-sm font-medium">Biblioteca:</span>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-violet-100">
+                <Library className="h-6 w-6 text-violet-600" />
               </div>
-              <div className="ml-2">
-                {loading ? (
-                  <Skeleton className="h-5 w-32" />
+              <div>
+<h1 className="text-2xl font-bold text-foreground">Dashboard</h1>                {loading ? (
+                  <Skeleton className="h-5 w-40" />
                 ) : (
-                  <span className="text-base text-gray-800">{libraryName}</span>
+                  <p className="text-sm text-gray-500">{libraryName}</p>
                 )}
               </div>
-              <div className="ml-auto flex items-center gap-3">
-                <div className="text-xs text-gray-500 hidden md:block">
-                  Última atualização: {new Date().toLocaleDateString()}
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  className="bg-gray-50 hover:bg-gray-100 rounded-md px-3 py-1.5 flex items-center gap-1.5 text-xs text-gray-700 font-medium border border-gray-200 transition-colors"
-                >
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  <span>Atualizar dados</span>
-                </motion.button>
-              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500 hidden md:block">
+                Última atualização: {new Date().toLocaleDateString()}
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={fetchDashboardData}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </Button>
             </div>
           </div>
         </motion.div>
@@ -211,4 +213,3 @@ export default function AdminDashboardPage() {
     </div>
   )
 }
-

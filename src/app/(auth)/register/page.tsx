@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -11,16 +10,21 @@ import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Mail, User, Lock, Library, MapPin, AtSign } from "lucide-react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [libraryName, setLibraryName] = useState("")
-  const [location, setLocation] = useState("") // Novo estado para o endereço
-  const [contactEmail, setContactEmail] = useState("") // Novo estado para o email de contato
+  const [location, setLocation] = useState("")
+  const [contactEmail, setContactEmail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  // Verificação de autenticação e papel do usuário
+  
 
   // Função para verificar se a biblioteca já existe
   const checkLibraryExists = async (name: string) => {
@@ -48,7 +52,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    
+
     console.log("Iniciando processo de registro")
 
     if (!libraryName) {
@@ -72,7 +76,6 @@ export default function RegisterPage() {
       return
     }
 
-    // Verificar se a biblioteca já existe
     const libraryExists = await checkLibraryExists(libraryName)
     if (libraryExists) {
       setError("Já existe uma biblioteca com este nome. Por favor, escolha outro nome.")
@@ -86,7 +89,7 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: { full_name: fullName, role: "admin" }, // Define role como 'admin' por padrão
+        data: { full_name: fullName, role: "admin" },
       },
     })
 
@@ -96,15 +99,14 @@ export default function RegisterPage() {
       setLoading(false)
     } else if (data.user) {
       console.log("Usuário criado com sucesso:", data.user.id)
-      
-      // Criar a biblioteca com os novos campos
+
       console.log("Criando biblioteca:", libraryName)
       const { data: library, error: libraryError } = await supabase
         .from("libraries")
-        .insert({ 
+        .insert({
           name: libraryName,
-          location: location,         // Novo campo: endereço
-          contact_email: contactEmail // Novo campo: email de contato
+          location: location,
+          contact_email: contactEmail,
         })
         .select("id")
         .single()
@@ -118,7 +120,6 @@ export default function RegisterPage() {
 
       console.log("Biblioteca criada com sucesso:", library.id)
 
-      // Inserir na tabela users como admin, associado à biblioteca
       console.log("Associando usuário à biblioteca")
       const { error: userError } = await supabase.from("users").insert({
         id: data.user.id,
@@ -127,7 +128,7 @@ export default function RegisterPage() {
         role: "admin",
         library_id: library.id,
       })
-      
+
       if (userError) {
         console.error("Erro ao associar usuário à biblioteca:", userError)
         setError("Erro ao finalizar registro. Tente novamente.")
@@ -136,7 +137,7 @@ export default function RegisterPage() {
       }
 
       console.log("Registro completo, redirecionando para /admin")
-      window.location.href = "/admin"
+      router.push("/admin")
     }
   }
 
@@ -146,13 +147,11 @@ export default function RegisterPage() {
     console.log("Página de registro carregada")
   }, [])
 
-  // Preencher o email de contato com o email do usuário por padrão
   useEffect(() => {
     if (email && !contactEmail) {
       setContactEmail(email)
     }
   }, [email, contactEmail])
-
   return (
     <div className="min-h-screen flex bg-[#f8f9fc]">
       <div className="hidden lg:flex w-1/2 bg-primary justify-center items-center relative overflow-hidden">

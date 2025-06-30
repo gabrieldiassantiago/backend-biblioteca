@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { handleDeleteBook } from "../../app/(admin)/admin/books/actions"
+import { handleDeleteBook } from "../../app/(admin)/admin/books/book-actions"
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert"
 
 interface DeleteBookButtonProps {

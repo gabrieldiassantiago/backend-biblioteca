@@ -1,76 +1,200 @@
+import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, User, Users, AlertCircle } from "lucide-react"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { MoreHorizontal, Eye, Users, GraduationCap, UserCheck, Clock } from 'lucide-react'
 import { Skeleton } from "@/components/ui/skeleton"
-import { Suspense } from "react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import Link from "next/link"
+import { UsersSearch } from "../../../../components/users/admin/users-search"
+import { Card, CardContent } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { getUserLibraryId } from "../loans/actions"
+import { UsersPagination } from "../../../../components/users/admin/users-pagination"
+import { UsersFilters } from "../../../../components/users/admin/users-filters"
 
-// Skeleton components (unchanged)
-function TableSkeleton() {
+// Interfaces
+interface RawUser {
+  id: string
+  full_name: string
+  email: string
+  role: string
+  created_at: string
+  class: string | null
+  grade: string | null
+  library_id: string
+  phone: string | null
+}
+
+interface FormattedUser {
+  id: string
+  full_name: string
+  email: string
+  role: string
+  created_at: string
+  class: string
+  grade: string
+  phone: string
+}
+
+// Skeleton Components
+function UsersListSkeleton() {
   return (
-    <div className="hidden md:block rounded-lg border bg-card shadow-sm overflow-hidden">
-      <Table>
-        <TableHeader className="bg-muted/50">
-          <TableRow>
-            <TableHead>Nome Completo</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Turma</TableHead>
-            <TableHead>Série/Ano</TableHead>
-            <TableHead>Cargo</TableHead>
-            <TableHead>Data de Criação</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <TableRow key={index} className="animate-pulse">
-              <TableCell>
-                <Skeleton className="h-5 w-[180px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[200px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[80px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[100px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[100px]" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-5 w-[120px]" />
-              </TableCell>
+    <div className="space-y-6">
+      {/* Stats Skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-8 w-12" />
+                </div>
+                <Skeleton className="h-10 w-10 rounded-lg" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Table Skeleton */}
+      <Card className="border-0 shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome Completo</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Turma</TableHead>
+              <TableHead>Série/Ano</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Data de Cadastro</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <Skeleton className="h-4 w-[200px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[150px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[80px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[100px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[120px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[100px]" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="h-8 w-8" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   )
 }
 
-function CardSkeleton() {
+function StatsSkeletonLoader() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:hidden">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <Card key={index} className="overflow-hidden animate-pulse">
-          <CardHeader className="pb-2 bg-muted/30">
-            <div className="flex justify-between items-start">
-              <Skeleton className="h-6 w-[150px]" />
-              <Skeleton className="h-5 w-[100px]" />
-            </div>
-          </CardHeader>
-          <CardContent className="pb-4 pt-3">
-            <div className="space-y-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i} className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-8 w-12" />
+              </div>
+              <Skeleton className="h-10 w-10 rounded-lg" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+// Stats Component
+async function UsersStats() {
+  const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
+
+  const { data: users } = await supabase.from("users").select("role, grade, created_at").eq("library_id", libraryId)
+
+  if (!users) return null
+
+  const stats = {
+    total: users.length,
+    students: users.filter((u) => u.role === "student").length,
+    admins: users.filter((u) => u.role === "admin").length,
+    recentlyAdded: users.filter((u) => {
+      const createdAt = new Date(u.created_at)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      return createdAt > thirtyDaysAgo
+    }).length,
+  }
+
+  const statCards = [
+    {
+      title: "Total de Usuários",
+      value: stats.total,
+      icon: Users,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-950",
+      description: "cadastrados",
+    },
+    {
+      title: "Estudantes",
+      value: stats.students,
+      icon: GraduationCap,
+      color: "text-green-600",
+      bgColor: "bg-green-50 dark:bg-green-950",
+      description: "alunos ativos",
+    },
+    {
+      title: "Administradores",
+      value: stats.admins,
+      icon: UserCheck,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-950",
+      description: "gestores",
+    },
+    {
+      title: "Novos (30 dias)",
+      value: stats.recentlyAdded,
+      icon: Clock,
+      color: "text-amber-600",
+      bgColor: "bg-amber-50 dark:bg-amber-950",
+      description: "recém cadastrados",
+    },
+  ]
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {statCards.map((stat, index) => (
+        <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                <p className="text-3xl font-bold text-foreground">{stat.value.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{stat.description}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${stat.bgColor}`}>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
               </div>
             </div>
           </CardContent>
@@ -80,371 +204,282 @@ function CardSkeleton() {
   )
 }
 
-function PaginationSkeleton() {
+interface UsersPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function UsersPage({ searchParams }: UsersPageProps) {
+  const resolvedSearchParams = await searchParams
+  const page = Math.max(1, Number.parseInt((resolvedSearchParams.page as string) || "1", 10))
+  const search = (resolvedSearchParams.search as string) || ""
+  const grade = (resolvedSearchParams.grade as string) || ""
+  const sort = (resolvedSearchParams.sort as string) || "newest"
+
   return (
-    <div className="flex justify-center mt-6">
-      <div className="flex items-center space-x-1">
-        <Skeleton className="h-9 w-20 hidden sm:block" />
-        <div className="flex space-x-1">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className="h-9 w-9 rounded-md" />
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
+        {/* Header Section */}
+        <div className="space-y-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 rounded-xl">
+                  <Users className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold tracking-tight text-foreground">Usuários</h1>
+                  <p className="text-lg text-muted-foreground">Gerencie alunos e usuários da biblioteca</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <Suspense fallback={<StatsSkeletonLoader />}>
+            <UsersStats />
+          </Suspense>
         </div>
-        <Skeleton className="h-9 w-20 hidden sm:block" />
+
+            {/* Search and Filters Section */}
+      <Card className="border-0 shadow-sm bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-wrap items-center gap-6">
+            {/* Search Bar */}
+            <div className="flex-grow min-w-[280px] max-w-lg">
+              <UsersSearch defaultValue={search} />
+            </div>
+
+            {/* Filters */}
+            <div className="flex-grow min-w-[280px] max-w-2xl">
+              <UsersFilters currentGrade={grade} currentSort={sort} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
+        {/* Results Section */}
+        <div className="space-y-4">
+          {/* Results Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {search && (
+                <span className="flex items-center gap-1">
+                  Resultados para <strong className="text-foreground">{search}</strong>
+                </span>
+              )}
+              {(grade || (sort && sort !== "newest")) && (
+                <span className="flex items-center gap-1">• Filtros aplicados</span>
+              )}
+            </div>
+          </div>
+
+          {/* Users Table */}
+          <Card className="border-0 shadow-sm bg-white dark:bg-gray-800">
+            <Suspense fallback={<UsersListSkeleton />}>
+              <UsersTable page={page} search={search} grade={grade} sort={sort} />
+            </Suspense>
+          </Card>
+        </div>
       </div>
     </div>
   )
 }
 
-async function StudentsContent({ searchParams }: { searchParams: Promise<{ search?: string; page?: string }> }) {
+async function UsersTable({ page, search, grade, sort }: { page: number; search: string; grade: string; sort: string }) {
   const supabase = await createClient()
+  const libraryId = await getUserLibraryId()
+  const pageSize = 12
+  const offset = (page - 1) * pageSize
 
-  const formatarRole = (role: string) => {
-    switch (role) {
-      case "student":
-        return "Estudante"
-      case "admin":
-        return "Administrador"
-      default:
-        return role
-    }
-  }
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    console.log("Erro na autenticação ou usuário não encontrado:", authError?.message || "Sessão ausente")
-    return null
-  }
-
-  const roleFromMetadata = user.user_metadata?.role
-  let role = roleFromMetadata
-
-  if (!roleFromMetadata) {
-    const { data: userData, error: userError } = await supabase.from("users").select("role").eq("id", user.id).single()
-
-    if (userError || !userData?.role) {
-      console.log("Erro ao buscar role ou role não encontrado:", userError?.message || "Dados ausentes")
-      return null
-    }
-    role = userData.role
-  }
-
-  if (role !== "admin") {
-    console.log("Acesso negado - Role do usuário:", role)
-    return null
-  }
-
-  const { data: userLibrary, error: libraryError } = await supabase
+  // Contagem
+  let countQuery = supabase
     .from("users")
-    .select("library_id")
-    .eq("id", user.id)
-    .single()
-
-  if (libraryError || !userLibrary?.library_id) {
-    console.log("Erro ao buscar library_id:", libraryError?.message || "Dados ausentes")
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-red-200 bg-red-50 shadow-sm animate-in fade-in">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center text-center space-y-3">
-              <div className="p-3 bg-red-100 rounded-full">
-                <AlertCircle className="h-10 w-10 text-red-500" />
-              </div>
-              <h3 className="text-xl font-semibold text-red-700">Erro de Configuração</h3>
-              <p className="text-red-600 max-w-md">Biblioteca não associada ao administrador. Contate o suporte.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const libraryId = userLibrary.library_id
-
-  const params = await searchParams
-  const searchQuery = params.search || ""
-  const page = Number.parseInt(params.page || "1", 10)
-  const limit = 10
-  const offset = (page - 1) * limit
-
-  let query = supabase
-    .from("users")
-    .select("id, full_name, email, role, created_at, class, grade", { count: "exact" })
+    .select("*", { count: "exact", head: true })
     .eq("library_id", libraryId)
     .eq("role", "student")
 
-  if (searchQuery) {
-    query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+  if (search) {
+    countQuery = countQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
   }
 
-  const { data: students, error: studentsError, count } = await query.range(offset, offset + limit - 1)
+  if (grade) {
+    countQuery = countQuery.eq("grade", grade)
+  }
 
-  if (studentsError) {
-    console.error("Erro ao listar alunos:", studentsError.message)
+  const { count } = await countQuery
+
+  // Busca
+  let usersQuery = supabase
+    .from("users")
+    .select("id, full_name, email, role, created_at, class, grade, library_id, phone")
+    .eq("library_id", libraryId)
+    .eq("role", "student")
+
+  if (search) {
+    usersQuery = usersQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+  }
+
+  if (grade) {
+    usersQuery = usersQuery.eq("grade", grade)
+  }
+
+  // Sorting
+  switch (sort) {
+    case "oldest":
+      usersQuery = usersQuery.order("created_at", { ascending: true })
+      break
+    case "name-asc":
+      usersQuery = usersQuery.order("full_name", { ascending: true })
+      break
+    case "name-desc":
+      usersQuery = usersQuery.order("full_name", { ascending: false })
+      break
+    case "email-asc":
+      usersQuery = usersQuery.order("email", { ascending: true })
+      break
+    case "email-desc":
+      usersQuery = usersQuery.order("email", { ascending: false })
+      break
+    default: // newest
+      usersQuery = usersQuery.order("created_at", { ascending: false })
+  }
+
+  const { data: users, error } = await usersQuery.range(offset, offset + pageSize - 1)
+
+  if (error) {
+    console.error("Erro ao buscar usuários:", error.message)
+    throw new Error("Erro ao carregar usuários: " + error.message)
+  }
+
+  const formattedUsers: FormattedUser[] = (users || []).map((user: RawUser) => ({
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    created_at: user.created_at,
+    class: user.class || "-",
+    grade: user.grade || "-",
+    phone: user.phone || "-",
+  }))
+
+  const totalPages = Math.ceil((count || 0) / pageSize)
+
+  if (!formattedUsers.length) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <AlertCircle className="h-12 w-12 text-red-500" />
-              <h3 className="text-xl font-semibold text-red-700">Erro ao Carregar Dados</h3>
-              <p className="text-red-600">{studentsError.message}</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+          <Users className="w-12 h-12 text-gray-400" />
+        </div>
+        <div className="text-center space-y-4">
+          <h3 className="text-xl font-semibold text-gray-900">Nenhum usuário encontrado</h3>
+          <p className="text-gray-600 max-w-md">
+            {search
+              ? `Não encontramos nenhum usuário que corresponda à sua busca por "${search}"`
+              : "Nenhum usuário foi cadastrado ainda"}
+          </p>
+          {search && (
+            <Link href="/admin/users">
+              <Button variant="outline" className="mt-4">
+                Limpar busca
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
     )
   }
 
-  const totalPages = Math.ceil((count || 0) / limit)
-
   return (
-    <>
-      {searchQuery && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <span>Resultados para:</span>
-          <Badge variant="secondary" className="font-normal">
-            {searchQuery}
-          </Badge>
-          <span>({count || 0} encontrados)</span>
+    <div className="space-y-6">
+      {/* Results Summary */}
+      <div className="flex items-center justify-between px-6 pt-6">
+        <div className="text-sm text-muted-foreground">
+          {search ? (
+            <span>
+              <strong>{count}</strong> resultado{count !== 1 ? "s" : ""} para {search}
+            </span>
+          ) : (
+            <span>
+              <strong>{count}</strong> usuário{count !== 1 ? "s" : ""} cadastrado{count !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
-      )}
+        <div className="text-sm text-muted-foreground">
+          Página {page} de {totalPages}
+        </div>
+      </div>
 
-      <div className="hidden md:block rounded-lg border bg-card shadow-sm overflow-hidden transition-all hover:shadow-md">
+      <Separator />
+
+      {/* Table */}
+      <div className="px-6">
         <Table>
-          <TableHeader className="bg-muted/50 sticky top-0">
+          <TableHeader>
             <TableRow>
-              <TableHead className="font-semibold">Nome Completo</TableHead>
-              <TableHead className="font-semibold">Email</TableHead>
-              <TableHead className="font-semibold">Turma</TableHead>
-              <TableHead className="font-semibold">Série/Ano</TableHead>
-              <TableHead className="font-semibold">Cargo</TableHead>
-              <TableHead className="font-semibold">Data de Criação</TableHead>
+              <TableHead>Nome Completo</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Turma</TableHead>
+              <TableHead>Série/Ano</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Data de Cadastro</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students && students.length > 0 ? (
-              students.map((student) => (
-                <TableRow key={student.id} className="hover:bg-muted/50 transition-colors cursor-pointer">
-                  <Link href={`/admin/users/${student.id}`} className="contents">
-                    <TableCell className="font-medium">{student.full_name}</TableCell>
-                    <TableCell>{student.email}</TableCell>
-                    <TableCell>{student.class || "-"}</TableCell>
-                    <TableCell>{student.grade || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-primary/10 text-primary">
-                        {formatarRole(student.role)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(student.created_at).toLocaleDateString("pt-BR")}</TableCell>
-                  </Link>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  <div className="flex flex-col items-center justify-center space-y-2 py-6 text-muted-foreground">
-                    <User className="h-12 w-12 text-muted-foreground/50" />
-                    <p>Nenhum aluno encontrado.</p>
-                  </div>
+            {formattedUsers.map((user) => (
+              <TableRow key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                <TableCell className="font-medium">{user.full_name}</TableCell>
+                <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                <TableCell>
+                  {user.class !== "-" ? (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      {user.class}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {user.grade !== "-" ? (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      {user.grade}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{user.phone}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <Link href={`/admin/users/${user.id}`}>
+                        <DropdownMenuItem className="cursor-pointer">
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver detalhes
+                        </DropdownMenuItem>
+                      </Link>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:hidden">
-        {students && students.length > 0 ? (
-          students.map((student) => (
-            <Link href={`/admin/users/${student.id}`} key={student.id} className="block">
-              <Card className="overflow-hidden border-primary/10 transition-all hover:shadow-md hover:border-primary/20">
-                <CardHeader className="pb-2 bg-muted/30">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg line-clamp-1">{student.full_name}</CardTitle>
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {formatarRole(student.role)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4 pt-3">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Email:</span>
-                      <span className="font-medium truncate">{student.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Turma:</span>
-                      <span>{student.class || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Série:</span>
-                      <span>{student.grade || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground min-w-[60px]">Criado em:</span>
-                      <span>{new Date(student.created_at).toLocaleDateString("pt-BR")}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))
-        ) : (
-          <Card className="p-6 text-center border-dashed">
-            <div className="flex flex-col items-center justify-center space-y-2 py-6">
-              <User className="h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">Nenhum aluno encontrado.</p>
-            </div>
-          </Card>
-        )}
-      </div>
-
+      {/* Pagination */}
       {totalPages > 0 && (
-        <div className="flex justify-center mt-6">
-          <nav
-            className="flex items-center space-x-1 bg-background/80 backdrop-blur-sm p-1 rounded-lg border shadow-sm"
-            aria-label="Navegação de páginas"
-          >
-            <Button variant="outline" size="sm" disabled={page <= 1} asChild className="hidden sm:flex">
-              <Link
-                href={`/admin/users?page=${page - 1}&search=${encodeURIComponent(searchQuery)}`}
-                className="transition-all"
-              >
-                Anterior
-              </Link>
-            </Button>
-
-            <div className="flex items-center space-x-1">
-              {Array.from({ length: totalPages }, (_, i) => {
-                const pageNum = i + 1
-                const showPage = pageNum === 1 || pageNum === totalPages || (pageNum >= page - 1 && pageNum <= page + 1)
-
-                const showEllipsisBefore = i === 1 && page > 3
-                const showEllipsisAfter = i === totalPages - 2 && page < totalPages - 2
-
-                if (showEllipsisBefore) {
-                  return (
-                    <span key="ellipsis-before" className="px-3 py-2 text-sm text-muted-foreground">
-                      ...
-                    </span>
-                  )
-                }
-
-                if (showEllipsisAfter) {
-                  return (
-                    <span key="ellipsis-after" className="px-3 py-2 text-sm text-muted-foreground">
-                      ...
-                    </span>
-                  )
-                }
-
-                if (showPage) {
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={page === pageNum ? "default" : "outline"}
-                      size="icon"
-                      className={`w-9 h-9 transition-all ${page === pageNum ? "animate-pulse-light" : ""}`}
-                      asChild
-                    >
-                      <Link
-                        href={`/admin/users?page=${pageNum}&search=${encodeURIComponent(searchQuery)}`}
-                        aria-current={page === pageNum ? "page" : undefined}
-                      >
-                        {pageNum}
-                      </Link>
-                    </Button>
-                  )
-                }
-
-                return null
-              })}
-            </div>
-
-            <Button variant="outline" size="sm" disabled={page >= totalPages} asChild className="hidden sm:flex">
-              <Link
-                href={`/admin/users?page=${page + 1}&search=${encodeURIComponent(searchQuery)}`}
-                className="transition-all"
-              >
-                Próxima
-              </Link>
-            </Button>
-          </nav>
-        </div>
+        <UsersPagination currentPage={page} totalPages={totalPages} search={search} grade={grade} sort={sort} />
       )}
-    </>
-  )
-}
-
-export default async function AdminUsersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ search?: string; page?: string }>
-}) {
-  // Await searchParams to resolve it
-  const params = await searchParams
-  const searchQuery = params.search || ""
-
-  return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 top-0 z-10 py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-primary/10">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Alunos da Biblioteca</h1>
-          </div>
-
-          <form action="/admin/users" method="GET" className="w-full sm:w-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Buscar por nome ou email..."
-                name="search"
-                defaultValue={searchQuery}
-                className="pl-10 w-full sm:w-[300px] bg-background border-primary/20 focus-visible:ring-primary/30"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                variant="ghost"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 hover:bg-primary/10"
-              >
-                Buscar
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        {searchQuery && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-in fade-in">
-            <span>Resultados para:</span>
-            <Badge variant="secondary" className="font-normal">
-              {searchQuery}
-            </Badge>
-          </div>
-        )}
-      </div>
-
-      <Suspense
-        fallback={
-          <>
-            <TableSkeleton />
-            <CardSkeleton />
-            <PaginationSkeleton />
-          </>
-        }
-      >
-        <StudentsContent searchParams={searchParams} />
-      </Suspense>
     </div>
   )
 }
-

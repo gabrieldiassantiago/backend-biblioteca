@@ -7,9 +7,11 @@ import { sendEmail } from '@/app/lib/email-service';
 export async function POST(request: NextRequest) {
   if (request.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+
   }
 
   try {
+
     const supabase = await createClient();
     const today = new Date().toISOString().split('T')[0];
     
